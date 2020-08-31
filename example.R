@@ -7,8 +7,8 @@ source("functions/node_health.R")
 #####Values for the user to change##################################################
 #This points to a directory that ONLY has your downloaded data from the sensor station. It can contain any/all of your downloaded data files...
 #...just don't manipulate/add your own files. Unzip any zipped directories therein, but compressed csv files (csv.gz) don't need to be unzipped
-infile <- "~/Downloads/owl-dataset"
-outpath <- "~/Documents"
+infile <- "../owl-dataset"
+outpath <- "../plots/"
 
 freq <- "1 hour" #interval to summarize node health indicators of interest
 

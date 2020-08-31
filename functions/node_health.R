@@ -106,7 +106,7 @@ node_channel_plots <- function(plot_data,filenames) {
     geom_line(data = ea, aes(x = Time, y = scale(N), group=1), colour="purple") +
     scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(health_data$Time), max(health_data$Time)))
   
-  return(list(p,p1,p2,p3))})
+  return(list(p1,p,p2,p3))})
 return(outplots)}
 
 #ONLY FOR V2 STATIONS
@@ -128,7 +128,7 @@ node_plots <- function(health, nodes) {
   return(p1)})
 return(plots)}
 
-export_node_channel_plots <- function(health_data,freq,out_path=getwd(),x=3,y=2,z=1) {
+export_node_channel_plots <- function(health_data,freq="1 hour",out_path=getwd(),x=3,y=2,z=1) {
   plotdata <- summarize_health_data(health_data, freq)
   filenames <- unique(plotdata$ID)
   outplot <- node_channel_plots(plotdata, filenames)
