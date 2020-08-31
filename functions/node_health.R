@@ -46,7 +46,7 @@ format_data <- function(health) {
 return(health)}
 
 #operations for each unique combination of channel and node, summarized by the specified time interval 
-summarize_health_data <- function(health) {
+summarize_health_data <- function(health, freq) {
   health$ID <- paste(health$RadioId, health$NodeId, sep="_")  
   node <- setDT(health)[, .(batt = mean(Battery), RSSI = mean(NodeRSSI), V = mean(SolarVolts), A = mean(SolarCurrent), .N), by = .(cut(Time, freq),ID)]
 #filling missing time intervals with NA values for visualization
