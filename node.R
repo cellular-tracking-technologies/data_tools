@@ -1,5 +1,7 @@
-## load up our functions into memory, change path as needed so the folder containing the function scripts can be found
+#This is an example R script for working with your CTT data! Once you have "forked" the folder successfully & then cloned that to your computer...
+#...click the data_tools.RProj and your working directory will be set to that folder. From there, everything here should work!
 
+## load up our functions into memory
 source("functions/data_manager.R")
 source("functions/node_health.R")
 
