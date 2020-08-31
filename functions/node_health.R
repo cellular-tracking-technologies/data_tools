@@ -41,8 +41,12 @@ source("functions/data_manager.R")
 
 ## ---------------------------
 
+format_data <- function(health) {
+  health$ID <- paste(health$RadioId, health$NodeId, sep="_") 
+return(health)}
+
 #operations for each unique combination of channel and node, summarized by the specified time interval 
-summarize_health_data <- function(health, freq) {
+summarize_health_data <- function(health) {
   health$ID <- paste(health$RadioId, health$NodeId, sep="_")  
   node <- setDT(health)[, .(batt = mean(Battery), RSSI = mean(NodeRSSI), V = mean(SolarVolts), A = mean(SolarCurrent), .N), by = .(cut(Time, freq),ID)]
 #filling missing time intervals with NA values for visualization
@@ -125,7 +129,9 @@ node_plots <- function(health, nodes) {
 return(plots)}
 
 export_node_channel_plots <- function(health_data,out_path=getwd(),x=3,y=2,z=1) {
-  outplot <- node_channel_plots(health_data)
+  health_data <- format_data(health_data)
+  filenames <- unique(health_data$ID)
+  outplot <- node_channel_plots(health_data, filenames)
   healthdata <- summarize_health_data(health_data)
   filenames <- unique(healthdata$ID) 
   for (i in 1:length(filenames)) {
@@ -143,7 +149,8 @@ export_node_channel_plots <- function(health_data,out_path=getwd(),x=3,y=2,z=1) 
 
 #ONLY FOR V2 STATIONS
 export_node_plots <- function(health_data,out_path=getwd()) {
-  outplots <- node(health_data)
+  nodes <- unique(health_data$NodeId)
+  outplots <- node_plots(health_data, nodes)
   nodes <- unique(health_data$NodeId)
   for (i in 1:length(nodes)) {
     file_name = paste("nodes_",nodes[i],".png", sep="")

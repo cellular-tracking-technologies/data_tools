@@ -16,6 +16,8 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
 #"""load data files from a directory that contains all the compressed (or uncompressed) data files straight off the station"""
   beep_files <- list.files(directory_name, pattern = beep_pattern, full.names = TRUE, recursive = TRUE)
   beep_files <- beep_files[grep("^(?=.*data)(?!.*node)", beep_files, perl=TRUE)]
+  beep_files <- beep_files[grep("^(?=.*data)(?!.*log)", beep_files, perl=TRUE)]
+  beep_files <- beep_files[grep("^(?=.*data)(?!.*gps)", beep_files, perl=TRUE)]
 #beep_files <- beep_files[!grepl("node", beep_files)]
 
   DatePattern = '^[[[:digit:]]{4}-[[[:digit:]]{2}-[[[:digit:]]{2}[T, ][[[:digit:]]{2}:[[[:digit:]]{2}:[[[:digit:]]{2}(.[[[:digit:]]{3})?[Z]?'
