@@ -128,12 +128,11 @@ node_plots <- function(health, nodes) {
   return(p1)})
 return(plots)}
 
-export_node_channel_plots <- function(health_data,out_path=getwd(),x=3,y=2,z=1) {
-  health_data <- format_data(health_data)
-  filenames <- unique(health_data$ID)
-  outplot <- node_channel_plots(health_data, filenames)
-  healthdata <- summarize_health_data(health_data)
-  filenames <- unique(healthdata$ID) 
+export_node_channel_plots <- function(health_data,freq,out_path=getwd(),x=3,y=2,z=1) {
+  plotdata <- summarize_health_data(health_data, freq)
+  filenames <- unique(plotdata$ID)
+  outplot <- node_channel_plots(plotdata, filenames)
+
   for (i in 1:length(filenames)) {
     file_name = paste(out_path,"node_",filenames[i],".png", sep="")
     png(file_name, width=1800, height=1200)

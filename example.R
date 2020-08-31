@@ -59,7 +59,7 @@ radionode_plots <- node_channel_plots(plotting_data, ids)
 ## if you want to write out plot images...
 #call the function "export_node_channel_plots(health,outpath,x,y,z)" replacing x, y, z with the integer index of the plot desired for each of the 3 panels
 #the resulting plots will be in "outpath" named "node_<RadioId>_<NodeId>.png"
-#export_node_channel_plots(health_data,outpath,3,2,1)
+export_node_channel_plots(health_data,freq,outpath,3,2,1)
 
 ###FOR V2 STATIONS ONLY
 nodes <- unique(health_data$NodeId)
