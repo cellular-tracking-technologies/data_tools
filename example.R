@@ -1,5 +1,4 @@
-#This is an example R script for working with your CTT data! Once you have "forked" the folder successfully & then cloned that to your computer...
-#...click the data_tools.RProj and your working directory will be set to that folder. From there, everything here should work!
+#This is an example R script for working with your CTT data! click the data_tools.RProj file in this folder, and your working directory will be set to that folder.
 
 ## load up our functions into memory
 source("functions/data_manager.R")
@@ -11,19 +10,11 @@ source("functions/node_health.R")
 infile <- "../test/mysensor"
 outpath <- "where you want your plots to be stored"
 
-#Optional variables to set: start time of your data of interest, end time. You can set these in whatever time zone you want & it will translate
-#https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
-#you can also subset by a vector of TagId(s)
-
-#EXAMPLE POSSIBLE VALUES
-#tags <- c("61526633")
-#begin = as.POSIXct("2020-07-30 12:00:00", tz = "America/New_York")
-#endtime = as.POSIXct("2020-08-20 12:00:00", tz = "America/New_York")
-
 freq <- "1 hour" #interval to summarize node health indicators of interest
 
 ##you can find your closest location here: https://tides.mobilegeographics.com/ and click to display the tide chart
-## if you want tide-based viz on your graphs, un-comment the tide.R function line in the header of node_health.R & all needed packages, change tides to TRUE here and set your lat/long
+## if you want tide-based viz on your graphs, un-comment the tide.R function line in the header of node_health.R & all needed packages, change tides to TRUE here
+#set your lat/long
 longitude <- -74.913680
 latitude <- 39.000926
 tides = FALSE
