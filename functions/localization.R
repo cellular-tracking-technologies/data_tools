@@ -138,6 +138,7 @@ advanced_resampled_stats <- function(beeps, node, freq) {
     summarise(max_rssi = max(TagRSSI), beep_count = length(TagRSSI), node_x = max(x), node_y = max(y), min_rssi = min(TagRSSI), std_rssi = sd(TagRSSI),
               node_lat = max(node_lat), node_lng = max(node_lng))
   outdf <- as.data.frame(filtered_df)
+  DEFAULT_PATH_LOSS_COEFFICIENT=5
   outdf$radius <- sapply(outdf$max_rssi, get_radius_from_rssi, DEFAULT_PATH_LOSS_COEFFICIENT)
   return(outdf)}
 
@@ -145,7 +146,7 @@ weighted_average <- function(beeps, node, freq, MAX_NODES=0) {
   df <- merge_df(beeps, node)
   zone = df$zone[1]
   letter = df$letter[1]
-  filtered_df <- advanced_resampled_stats(freq)
+  filtered_df <- advanced_resampled_stats(beeps,node,freq)
   #filtered_df <- merge(filtered_df, noderssi, by="NodeId")
   filtered_df$weight <- filtered_df$beep_count
   #filtered_df$weight <- ((filtered_df$max_rssi*-1)*filtered_df$beep_count)#/(filtered_df$V1*-1)
