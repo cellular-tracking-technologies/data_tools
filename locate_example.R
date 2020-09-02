@@ -4,13 +4,8 @@ source("/functions/localization.R")
 
 ###EDIT THESE VALUES
 infile <- "../owl-dataset"
-nodes <- read.csv("~/Downloads/Node.csv", as.is=TRUE, na.strings=c("NA", "")) #uppercase node letters
+nodes <- read.csv("~/Downloads/Nodes08262020.csv", as.is=TRUE, na.strings=c("NA", "")) #uppercase node letters
 tags <- read.csv("~/Downloads/Tags.csv", as.is=TRUE, na.strings=c("NA", "")) #uppercase node letters
-
-###these are some fixes related to this specific file, disregard generally
-nodes[14,"lng"] <- nodes[14,"lng"]*-1
-nodes[11,"NodeId"] <- "328E34"
-####
 
 all_data <- load_data(infile)
 beep_data <- all_data[[1]]
