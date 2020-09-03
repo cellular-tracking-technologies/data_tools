@@ -119,6 +119,25 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
 
 return(list(beep_data, health_data, gps_data))}
 
+load_node_data <- function(infile) {
+  files <- list.files(infile, pattern = "beep*", full.names = TRUE, recursive = TRUE)
+  Sam3 <- lapply(files, function(x) {
+    df <- read.csv(x,as.is=TRUE, na.strings=c("NA", ""))
+    return(df)})
+  dfs <- Sam3[!duplicated(Sam3)]
+  dfs <- Map(cbind, dfs, file = files[!duplicated(Sam3)])
+  nodes <- rbindlist(dfs)
+  nodes$NodeId <- sapply(strsplit(nodes$file, "[/]"), function(x) {x[[length(x)-1]]})
+  time = "UTC"
+  nodes$Time <- as.POSIXct(nodes$time,format="%Y-%m-%dT%H:%M:%SZ",tz = time)
+  #nodes <- nodes[nodes$Time > as.POSIXct("2020-08-20"),]
+  nodes <- nodes[order(nodes$Time, nodes$file),]
+  nodes$RadioId <- NA
+  nodes$TagId <- nodes$id
+  nodes$TagRSSI <- nodes$rssi
+  nodes$Validated <- NA
+return(nodes)}
+
 export_data <- function(outpath) {
   now <- Sys.time()
   attr(now, "tzone") <- "UTC"
