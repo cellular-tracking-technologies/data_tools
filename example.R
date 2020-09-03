@@ -35,6 +35,11 @@ beep_data <- all_data[[1]]
 health_data <- all_data[[2]]
 gps_data <- all_data[[3]]
 
+#put your beep files straight off the node each into a folder corresponding to the node ID
+#put all of these node ID folders into a folder, which is where "indir" should be pointed
+indir <- "path to folder containing all your node files"
+my_node_data <- load_node_data(indir)
+
 #UNCOMMENT AND RUN THE export_data() FUNCTION below IF YOU WANT OUTPUT CSV FILES
 #export_data(out_path)
 
