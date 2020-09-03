@@ -127,7 +127,8 @@ load_node_data <- function(infile) {
   dfs <- Sam3[!duplicated(Sam3)]
   dfs <- Map(cbind, dfs, file = files[!duplicated(Sam3)])
   nodes <- rbindlist(dfs)
-  nodes$NodeId <- sapply(strsplit(nodes$file, "[/]"), function(x) {x[[length(x)-1]]})
+  nodes <- as.data.frame(nodes)
+  nodes$NodeId <- sapply(strsplit(as.character(nodes$file), "[/]"), function(x) {x[[length(x)-1]]})
   time = "UTC"
   nodes$Time <- as.POSIXct(nodes$time,format="%Y-%m-%dT%H:%M:%SZ",tz = time)
   #nodes <- nodes[nodes$Time > as.POSIXct("2020-08-20"),]

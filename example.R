@@ -5,8 +5,9 @@ source("functions/data_manager.R")
 source("functions/node_health.R")
 
 #####Values for the user to change##################################################
-#This points to a directory that ONLY has your downloaded data from the sensor station. It can contain any/all of your downloaded data files...
-#...just don't manipulate/add your own files. Unzip any zipped directories therein, but compressed csv files (csv.gz) don't need to be unzipped
+#This points to a directory that ONLY has your downloaded data from the sensor station.
+#It can contain any/all of your downloaded data files, just don't manipulate/add your own unrelated/altered files.
+#Unzip any zipped directories therein, but compressed csv files (csv.gz) don't need to be unzipped
 infile <- "../owl-dataset"
 outpath <- "../plots/"
 
@@ -19,7 +20,8 @@ longitude <- -74.913680
 latitude <- 39.000926
 tides = FALSE
 
-#Optional variables to set: start time of your data of interest, end time. You can set these in whatever time zone you want & it will translate
+#Optional variables to set: start time of your data of interest, end time.
+#You can set these in whatever time zone you want & it will translate
 #https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 #you can also subset by a vector of TagId(s)
 
@@ -37,8 +39,8 @@ gps_data <- all_data[[3]]
 
 #put your beep files straight off the node each into a folder corresponding to the node ID
 #put all of these node ID folders into a folder, which is where "indir" should be pointed
-indir <- "path to folder containing all your node files"
-my_node_data <- load_node_data(indir)
+infile <- "../test/experiment/NodeCSV"
+my_node_data <- load_node_data(infile)
 
 #UNCOMMENT AND RUN THE export_data() FUNCTION below IF YOU WANT OUTPUT CSV FILES
 #export_data(out_path)
