@@ -1,25 +1,14 @@
 library(data.table)
-#starttime <- as.POSIXct("1980-07-30 12:00:00", tz = "America/New_York")
-#endtime <- as.POSIXct("2050-08-20 12:00:00", tz = "America/New_York")
-#tags <- c()
-
+#directory_name <- "../test/V1"
 load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags=NULL) {
- 
-  # '*-data*.*csv*'
-  PERLexp <- '*-data*.*csv*'
-  beep_pattern <-PERLexp
+  beep_pattern <- '*-data*.*csv*'
   #fancy = '.*CTT-(?P<station_id>[a-fA-F0-9]{12})-(?P<filetype>[a-zA-Z-_]+)+' test if this in correct type of expression gets files
-  #PERL? this is from Bob's python script. maybe use e.g. grep or something like it on list of files?
   gps_pattern = '*-gps*.*csv*'
   health_pattern = '*-node*.*csv*'
 
 #"""load data files from a directory that contains all the compressed (or uncompressed) data files straight off the station"""
   beep_files <- list.files(directory_name, pattern = beep_pattern, full.names = TRUE, recursive = TRUE)
-  beep_files <- beep_files[grep("^(?=.*data)(?!.*node)", beep_files, perl=TRUE)]
-  beep_files <- beep_files[grep("^(?=.*data)(?!.*log)", beep_files, perl=TRUE)]
-  beep_files <- beep_files[grep("^(?=.*data)(?!.*gps)", beep_files, perl=TRUE)]
-#beep_files <- beep_files[!grepl("node", beep_files)]
-
+  beep_files <- beep_files[grep("^(?=.*data)(?!.*(node|log|gps))", beep_files, perl=TRUE)]
   DatePattern = '^[[[:digit:]]{4}-[[[:digit:]]{2}-[[[:digit:]]{2}[T, ][[[:digit:]]{2}:[[[:digit:]]{2}:[[[:digit:]]{2}(.[[[:digit:]]{3})?[Z]?'
   time = "UTC"
 
@@ -32,38 +21,33 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
       print(paste("Read.table didn't work!:  ",err))
     })
     
-    if("recorded.at" %in% colnames(df)) {
-      if(any(grepl("T",df$gps.at))) {
-      df$RecordedAt = as.POSIXct(df$recorded.at,format="%Y-%m-%dT%H:%M:%OS",tz = time) } else {
-        df$RecordedAt <- as.POSIXct(df$recorded.at,tz = time)
-      }
-    }
-    
-    if("gps.at" %in% colnames(df)) {
-      if(any(grepl("T",df$gps.at))) {
-        df$Time <- as.POSIXct(df$gps.at,format="%Y-%m-%dT%H:%M:%OS",tz = time)} else {
-          df$Time <- as.POSIXct(df$gps.at,tz = time)
-        } 
-    }
-    
-    if("Time" %in% colnames(df)) {
-      pre_count = nrow(df)
-      df = df[!is.na(df$Time),]
-      df = df[grepl(DatePattern,df$Time),]
-      if(any(grepl("T", df$Time))) {df$Time <- as.POSIXct(df$Time,format="%Y-%m-%dT%H:%M:%OS",tz = time)
-      } else {df$Time <- as.POSIXct(df$Time, tz = time)}
-      post_count = nrow(df)
-      delta = pre_count - post_count
-      }
-  
-    if("RecordedAt" %in% colnames(df)) {
-      if(any(grepl("T", df$RecordedAt))) {df$RecordedAt <- as.POSIXct(df$RecordedAt,format="%Y-%m-%dT%H:%M:%OS",tz = time)
-      } else {df$RecordedAt <- as.POSIXct(df$RecordedAt, tz = time)}
-    }
+    time_cols <- c("Time", "RecordedAt", "recorded.at", "gps.at")
+    timecols <- lapply(time_cols, function(x) {
+      if(x %in% colnames(df)) {
+        idx <- which(colnames(df)==x)
+        #pre_count = nrow(df)
+        #df = df[!is.na(df[,idx]),]
+        #df = df[grepl(DatePattern,df[,idx]),]
+        if(any(grepl("T", df[,idx]))) {df[,idx] <- as.POSIXct(df[,idx],format="%Y-%m-%dT%H:%M:%OS",tz = time)
+        } else {df[,idx] <- as.POSIXct(df[,idx], tz = time)}
+        #post_count = nrow(df)
+        #delta = pre_count - post_count
+      vals <- df[,idx]} else {vals <- c()} 
+    return(vals)})
+    reformat <- which(!sapply(timecols, is.null))
+    df[,time_cols[reformat]] <- timecols[reformat]
   return(df)})
   }
 
   dfs_to_merge <- dfs(beep_files)
+  remove <- which(!sapply(dfs_to_merge, is.data.frame))*-1
+  if (length(remove) > 0) {dfs_to_merge <- dfs_to_merge[remove]} 
+  
+  df_merge <- function(df_list) {
+    beep_data <- rbindlist(df_list)
+    beep_data <- beep_data[order(beep_data$Time),]
+  return(beep_data)}
+  
   if (length(dfs_to_merge) > 0) {
     beep_data <- rbindlist(dfs_to_merge)
     beep_data <- beep_data[order(beep_data$Time),]
@@ -75,6 +59,8 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
 
   node_health_files <- list.files(directory_name, pattern = health_pattern, full.names = TRUE, recursive = TRUE)
   dfs_to_merge <- dfs(node_health_files)
+  remove <- which(!sapply(dfs_to_merge, is.data.frame))*-1
+  if (length(remove) > 0) {dfs_to_merge <- dfs_to_merge[remove]} 
 #what this does differently here is also checks for and removes records with NA times or times that don't fit the format
 #also converts RecordedAt column to POSIXct
   if (length(dfs_to_merge) > 0) {
@@ -88,6 +74,8 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
 #this also converts Time to POSIXct, removes records that have NA time or don't fit the format
   gps_files <- list.files(directory_name, pattern = gps_pattern, full.names = TRUE, recursive = TRUE)
   dfs_to_merge <- dfs(gps_files)
+  remove <- which(!sapply(dfs_to_merge, is.data.frame))*-1
+  if (length(remove) > 0) {dfs_to_merge <- dfs_to_merge[remove]} 
   if (length(dfs_to_merge) > 0) {
     gps_data <- rbindlist(dfs_to_merge)
     gps_data <- gps_data[order(gps_data$Time),]
