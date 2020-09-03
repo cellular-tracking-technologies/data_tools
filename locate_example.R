@@ -13,6 +13,8 @@ tags <- read.csv("~/Downloads/Tags.csv", as.is=TRUE, na.strings=c("NA", "")) #up
 
 all_data <- load_data(infile)
 beep_data <- all_data[[1]]
+beep_data <- beep_data[beep_data$Time > as.POSIXct("2020-08-10"),]
+beep_data <- beep_data[beep_data$NodeId %in% c("326317", "326584", "3282fa", "3285ae", "3288f4"),]
 
 filename <- "output.csv"
 ###UNCOMMENT THESE AND FILL WITH YOUR DESIRED VALUES IF YOU WANT YOUR OUTPUT AS ONLY A SUBSET OF THE DATA
@@ -22,7 +24,7 @@ filename <- "output.csv"
 #freq <- The interval of the added datetime variable. Any character string that would be accepted by seq.Date or seq.POSIXt
 
 #EXAMPLE POSSIBLE VALUES
-tag_id <- c("07072A2A","52784C2D") #tags$TagId
+tag_id <- c("52784C2D") #tags$TagId
 #
 #channel <- c(2)
 freq <- "5 min"
@@ -31,6 +33,9 @@ max_nodes <- 0 #how many nodes should be used in the localization calculation?
 df <- merge_df(beep_data, nodes)
 
 resampled <- advanced_resampled_stats(beep_data, nodes, freq)
+p3 = ggplot(data=resampled, aes(x=freq, y=max_rssi, group=NodeId, colour=NodeId)) +
+  geom_line()
+
 locations <- weighted_average(beep_data,nodes,freq)
 
 nodes_spatial <- nodes
@@ -48,6 +53,6 @@ nodes_plot <- st_as_sf(nodes_spatial)
 
 ggplot() + 
   #  ggmap(ph_basemap) +
-  geom_sf(data = locations, aes(colour=TagId), inherit.aes = FALSE) + 
+  #geom_sf(data = locations, aes(colour=TagId), inherit.aes = FALSE) + 
   geom_sf(data = nodes_plot) +
   geom_text(data = nodes, aes(x=lng, y=lat, label = NodeId), size = 5)
