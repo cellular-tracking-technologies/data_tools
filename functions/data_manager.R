@@ -70,6 +70,7 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
     beep_data$ID <- paste(beep_data$Time, beep_data$RadioId, beep_data$TagId, beep_data$NodeId)
     beep_data <- beep_data[!duplicated(beep_data$ID),]
     beep_data$ID <- NULL
+    beep_data$NodeId <- toupper(beep_data$NodeId)
   }
 
   node_health_files <- list.files(directory_name, pattern = health_pattern, full.names = TRUE, recursive = TRUE)
@@ -82,6 +83,7 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
     health_data$ID <- paste(health_data$Time, health_data$RadioId, health_data$NodeId)
     health_data <- health_data[!duplicated(health_data$ID),]
     health_data$ID <- NULL
+    health_data$NodeId <- toupper(health_data$NodeId)
   }
 #this also converts Time to POSIXct, removes records that have NA time or don't fit the format
   gps_files <- list.files(directory_name, pattern = gps_pattern, full.names = TRUE, recursive = TRUE)
