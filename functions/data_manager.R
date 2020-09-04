@@ -28,8 +28,8 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
         #pre_count = nrow(df)
         #df = df[!is.na(df[,idx]),]
         #df = df[grepl(DatePattern,df[,idx]),]
-        if(any(grepl("T", df[,idx]))) {df[,idx] <- as.POSIXct(df[,idx],format="%Y-%m-%dT%H:%M:%OS",tz = time)
-        } else {df[,idx] <- as.POSIXct(df[,idx], tz = time)}
+        if(any(grepl("T", df[,idx]))) {df[,idx] <- as.POSIXct(df[,idx],format="%Y-%m-%dT%H:%M:%OS",tz = "UTC")
+        } else {df[,idx] <- as.POSIXct(df[,idx], tz = "UTC")}
         #post_count = nrow(df)
         #delta = pre_count - post_count
       vals <- df[,idx]} else {vals <- c()} 
@@ -44,13 +44,12 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
   if (length(remove) > 0) {dfs_to_merge <- dfs_to_merge[remove]} 
   
   df_merge <- function(df_list) {
-    beep_data <- rbindlist(df_list)
-    beep_data <- beep_data[order(beep_data$Time),]
-  return(beep_data)}
+    df <- rbindlist(df_list)
+    #df <- df[order(df$Time),]
+  return(df)}
   
   if (length(dfs_to_merge) > 0) {
-    beep_data <- rbindlist(dfs_to_merge)
-    beep_data <- beep_data[order(beep_data$Time),]
+    beep_data <- df_merge(dfs_to_merge)
     beep_data$ID <- paste(beep_data$Time, beep_data$RadioId, beep_data$TagId, beep_data$NodeId)
     beep_data <- beep_data[!duplicated(beep_data$ID),]
     beep_data$ID <- NULL
@@ -64,8 +63,7 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
 #what this does differently here is also checks for and removes records with NA times or times that don't fit the format
 #also converts RecordedAt column to POSIXct
   if (length(dfs_to_merge) > 0) {
-    health_data <- rbindlist(dfs_to_merge)
-    health_data <- health_data[order(health_data$Time),]
+    health_data <- df_merge(dfs_to_merge)
     health_data$ID <- paste(health_data$Time, health_data$RadioId, health_data$NodeId)
     health_data <- health_data[!duplicated(health_data$ID),]
     health_data$ID <- NULL
@@ -77,8 +75,7 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
   remove <- which(!sapply(dfs_to_merge, is.data.frame))*-1
   if (length(remove) > 0) {dfs_to_merge <- dfs_to_merge[remove]} 
   if (length(dfs_to_merge) > 0) {
-    gps_data <- rbindlist(dfs_to_merge)
-    gps_data <- gps_data[order(gps_data$Time),]
+    gps_data <- df_merge(dfs_to_merge)
   }
   if(!is.null(starttime)) {attr(starttime, "tzone") <- "UTC"}
   if(!is.null(endtime)) {attr(endtime, "tzone") <- "UTC"}
