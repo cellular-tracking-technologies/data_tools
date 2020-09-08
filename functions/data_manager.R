@@ -69,7 +69,7 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
           df <- df[df$recorded.at < endtime,]
         }}
       
-      if(!is.null(cols) & all(cols) %in% colnames(df)) {
+      if(!is.null(cols) & (all(cols %in% colnames(df)))) {
         df$ID <- apply(df[,cols],1, paste , collapse = "-" )
         df <- df[!duplicated(df$ID),]
         df$ID <- NULL
