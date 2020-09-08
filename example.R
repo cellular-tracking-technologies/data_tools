@@ -44,7 +44,7 @@ infile <- "../test/experiment/NodeCSV"
 my_node_data <- load_node_data(infile)
 
 #UNCOMMENT AND RUN THE export_data() FUNCTION below IF YOU WANT OUTPUT CSV FILES
-#export_data(out_path)
+#export_data(infile, starttime=NULL, endtime=NULL, tags=NULL, outpath)
 
 #health_data now has a data frame of all of your node health files. Alternatively, if you have a file already created that you'd like to work
 #with in the same format, you can always read.csv() into a data frame of the same name here
