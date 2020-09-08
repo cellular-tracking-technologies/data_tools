@@ -48,11 +48,11 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
       df <- as.data.frame(df)
       if("Time" %in% colnames(df)) {
         df <- df[order(df$Time),]
-        if(!is.null(starttime)) {
+        if(!is.null(starttime) & inherits(starttime, "POSIXct")) {
           attr(starttime, "tzone") <- "UTC"
           df <- df[df$Time > starttime,]
         }
-        if(!is.null(endtime)) {
+        if(!is.null(endtime) & inherits(endtime, "POSIXct")) {
           attr(endtime, "tzone") <- "UTC"
           df <- df[df$Time < endtime,]
         }
@@ -84,7 +84,7 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
 #this also converts Time to POSIXct, removes records that have NA time or don't fit the format
   gps_data <- df_merge(list.files(directory_name, pattern = gps_pattern, full.names = TRUE, recursive = TRUE))
   
-  if (!is.null(tags) & !is.null(beep_data)) {beep_data <- beep_data[beep_data$TagId %in% tags,]}
+  if (!is.null(tags) & !is.null(beep_data) & any(tags %in% beep_data$TagId)) {beep_data <- beep_data[beep_data$TagId %in% tags,]}
 return(list(beep_data, health_data, gps_data))}
 
 load_node_data <- function(infile) {
