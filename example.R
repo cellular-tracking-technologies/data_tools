@@ -20,7 +20,7 @@ longitude <- -74.913680
 latitude <- 39.000926
 tides = FALSE
 
-#Optional variables to set: start time of your data of interest, end time.
+#Optional parameters: start time of your data of interest, end time.
 #You can set these in whatever time zone you want & it will translate
 #https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 #you can also subset by a vector of TagId(s)
@@ -29,11 +29,12 @@ tides = FALSE
 #tags <- c("61526633")
 #start_time = as.POSIXct("2020-07-30 12:00:00", tz = "America/New_York")
 #end_time = as.POSIXct("2020-08-20 12:00:00", tz = "America/New_York")
-all_data <- load_data(infile, starttime=NULL, endtime=NULL, tags=NULL)
+all_data <- load_data(infile, endtime=as.POSIXct("2020-08-05", tz="UTC")) #starttime, tags
 #set arguments if you choose to subset by date or tags
 ####################################################################################
 
 beep_data <- all_data[[1]]
+beep_data <- beep_data[complete.cases(beep_data), ]
 health_data <- all_data[[2]]
 gps_data <- all_data[[3]]
 

@@ -17,9 +17,9 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
       if (file.size(i) > 0) {
         read.csv(i,as.is=TRUE, na.strings=c("NA", ""))
       }}, error = function(err) {
-    # error handler picks up where error was generated
-      print(paste("Read.table didn't work!:  ",err))
-    })
+        # error handler picks up where error was generated
+        print(paste("Read.table didn't work!:  ",err))
+      })
     
     time_cols <- c("Time", "RecordedAt", "recorded.at", "gps.at")
     timecols <- lapply(time_cols, function(x) {
@@ -32,76 +32,59 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
         } else {df[,idx] <- as.POSIXct(df[,idx], tz = "UTC")}
         #post_count = nrow(df)
         #delta = pre_count - post_count
-      vals <- df[,idx]} else {vals <- c()} 
-    return(vals)})
+        vals <- df[,idx]} else {vals <- c()} 
+      return(vals)})
     reformat <- which(!sapply(timecols, is.null))
     df[,time_cols[reformat]] <- timecols[reformat]
-  return(df)})
+    return(df)})
   }
-
-  dfs_to_merge <- dfs(beep_files)
-  remove <- which(!sapply(dfs_to_merge, is.data.frame))*-1
-  if (length(remove) > 0) {dfs_to_merge <- dfs_to_merge[remove]} 
   
-  df_merge <- function(df_list) {
-    df <- rbindlist(df_list)
-    #df <- df[order(df$Time),]
+  df_merge <- function(files, cols=NULL) {
+    df_list <- dfs(files)
+    remove <- which(!sapply(df_list, is.data.frame))*-1
+    if (length(remove) > 0) {df_list <- dfs_to_merge[remove]} 
+    if (length(df_list) > 0) {
+      df <- rbindlist(df_list)
+      df <- as.data.frame(df)
+      if("Time" %in% colnames(df)) {
+        df <- df[order(df$Time),]
+        if(!is.null(starttime)) {
+          attr(starttime, "tzone") <- "UTC"
+          df <- df[df$Time > starttime,]
+        }
+        if(!is.null(endtime)) {
+          attr(endtime, "tzone") <- "UTC"
+          df <- df[df$Time < endtime,]
+        }
+        } else if("recorded.at" %in% colnames(df)) {
+        df <- df[order(df$recorded.at),]
+        if(!is.null(starttime)) {
+          attr(starttime, "tzone") <- "UTC"
+          df <- df[df$recorded.at > starttime,]
+        }
+        if(!is.null(endtime)) {
+          attr(endtime, "tzone") <- "UTC"
+          df <- df[df$recorded.at < endtime,]
+        }}
+      
+      if(!is.null(cols)) {
+        df$ID <- apply(df[,cols],1, paste , collapse = "-" )
+        df <- df[!duplicated(df$ID),]
+        df$ID <- NULL
+      }
+      if("NodeId" %in% colnames(df)) {df$NodeId <- toupper(df$NodeId)}} else {df <- data.frame()}
   return(df)}
   
-  if (length(dfs_to_merge) > 0) {
-    beep_data <- df_merge(dfs_to_merge)
-    beep_data$ID <- paste(beep_data$Time, beep_data$RadioId, beep_data$TagId, beep_data$NodeId)
-    beep_data <- beep_data[!duplicated(beep_data$ID),]
-    beep_data$ID <- NULL
-    beep_data$NodeId <- toupper(beep_data$NodeId)
-  }
+  beep_data <- df_merge(beep_files, c("Time", "RadioId", "TagId", "NodeId"))
 
-  node_health_files <- list.files(directory_name, pattern = health_pattern, full.names = TRUE, recursive = TRUE)
-  dfs_to_merge <- dfs(node_health_files)
-  remove <- which(!sapply(dfs_to_merge, is.data.frame))*-1
-  if (length(remove) > 0) {dfs_to_merge <- dfs_to_merge[remove]} 
 #what this does differently here is also checks for and removes records with NA times or times that don't fit the format
 #also converts RecordedAt column to POSIXct
-  if (length(dfs_to_merge) > 0) {
-    health_data <- df_merge(dfs_to_merge)
-    health_data$ID <- paste(health_data$Time, health_data$RadioId, health_data$NodeId)
-    health_data <- health_data[!duplicated(health_data$ID),]
-    health_data$ID <- NULL
-    health_data$NodeId <- toupper(health_data$NodeId)
-  }
-#this also converts Time to POSIXct, removes records that have NA time or don't fit the format
-  gps_files <- list.files(directory_name, pattern = gps_pattern, full.names = TRUE, recursive = TRUE)
-  dfs_to_merge <- dfs(gps_files)
-  remove <- which(!sapply(dfs_to_merge, is.data.frame))*-1
-  if (length(remove) > 0) {dfs_to_merge <- dfs_to_merge[remove]} 
-  if (length(dfs_to_merge) > 0) {
-    gps_data <- df_merge(dfs_to_merge)
-  }
-  if(!is.null(starttime)) {attr(starttime, "tzone") <- "UTC"}
-  if(!is.null(endtime)) {attr(endtime, "tzone") <- "UTC"}
-  
-  if (exists("beep_data")) {
-    if (!is.null(starttime)) {
-      beep_data <- beep_data[beep_data$Time > starttime,]}
-    if (!is.null(endtime)) {
-      beep_data <- beep_data[beep_data$Time < endtime,]}
-    if (!is.null(tags)) beep_data <- beep_data[beep_data$TagId %in% tags,]
-  }
-  
-  if (exists("health_data")) {
-    if (!is.null(starttime)) {
-      health_data <- health_data[health_data$Time > starttime,]}
-    if (!is.null(endtime)) {
-      health_data <- health_data[health_data$Time < endtime,]}
-  }
-  
-  if (exists("gps_data")) {
-    if (!is.null(starttime)) {
-      gps_data <- gps_data[gps_data$Time > starttime,]}
-    if (!is.null(endtime)) {
-      gps_data <- gps_data[gps_data$Time < endtime,]}
-  }
+  health_data <- df_merge(list.files(directory_name, pattern = health_pattern, full.names = TRUE, recursive = TRUE), c("Time", "RadioId", "NodeId"))
 
+#this also converts Time to POSIXct, removes records that have NA time or don't fit the format
+  gps_data <- df_merge(list.files(directory_name, pattern = gps_pattern, full.names = TRUE, recursive = TRUE))
+  
+  if (!is.null(tags) & !is.null(beep_data)) {beep_data <- beep_data[beep_data$TagId %in% tags,]}
 return(list(beep_data, health_data, gps_data))}
 
 load_node_data <- function(infile) {
