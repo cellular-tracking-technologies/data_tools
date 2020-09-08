@@ -107,7 +107,7 @@ load_node_data <- function(infile) {
   nodes$Validated <- NA
 return(nodes)}
 
-export_data <- function(infile, starttime=NULL, endtime=NULL, tags=NULL, outpath) {
+export_data <- function(infile, outpath, starttime=NULL, endtime=NULL, tags=NULL) {
   all_data <- load_data(infile, starttime, endtime, tags)
   beep_data <- all_data[[1]]
   health_data <- all_data[[2]]
