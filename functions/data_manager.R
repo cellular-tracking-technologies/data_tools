@@ -12,7 +12,7 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
   DatePattern = '^[[[:digit:]]{4}-[[[:digit:]]{2}-[[[:digit:]]{2}[T, ][[[:digit:]]{2}:[[[:digit:]]{2}:[[[:digit:]]{2}(.[[[:digit:]]{3})?[Z]?'
   time = "UTC"
 
-  dfs <- function(x, cols=NULL) {lapply(x, function(i) {
+  dfs <- function(x) {lapply(x, function(i) { #cols=NULL
     df <- tryCatch({
       if (file.size(i) > 0) {
         read.csv(i,as.is=TRUE, na.strings=c("NA", ""))
