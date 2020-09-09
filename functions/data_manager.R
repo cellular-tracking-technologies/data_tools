@@ -42,7 +42,7 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
   }
   
   df_merge <- function(files, cols=NULL) {
-    df_list <- dfs(files, cols)
+    df_list <- dfs(files) #, cols
     remove <- which(!sapply(df_list, is.data.frame))*-1
     if (length(remove) > 0) {df_list <- df_list[remove]} 
     if (length(df_list) > 0) {
