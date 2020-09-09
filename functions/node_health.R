@@ -39,11 +39,7 @@ require(gridExtra)
 # source("functions/tide.R") 
 source("functions/data_manager.R")
 
-## ---------------------------
-
-format_data <- function(health) {
-  health$ID <- paste(health$RadioId, health$NodeId, sep="_") 
-return(health)}
+## --------------------------
 
 #operations for each unique combination of channel and node, summarized by the specified time interval 
 summarize_health_data <- function(health, freq) {
@@ -116,7 +112,7 @@ node_plots <- function(health, nodes) {
   #ea <- plot_data[plot_data$NodeId == "496",]
     plot_data <- health[health$NodeId==park,]
   
-  #these plots are to see if/where there are date mismatches for the time sent by and received from the node
+  #these plots are to see if/where there are date mismatches for the time sent by and received from the node (i.e. GPS fix loss)
     plot_data$time <- format(plot_data$Time,'%Y-%m-%d')
     plot_data$recorded <- format(plot_data$RecordedAt,'%Y-%m-%d')
     plot_data$match <- as.integer(unname(unlist(Map(identical, plot_data$time, plot_data$recorded))))
