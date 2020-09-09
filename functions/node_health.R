@@ -146,7 +146,6 @@ export_node_channel_plots <- function(health_data,freq="1 hour",out_path=getwd()
 export_node_plots <- function(health_data,out_path=getwd()) {
   nodes <- unique(health_data$NodeId)
   outplots <- node_plots(health_data, nodes)
-  nodes <- unique(health_data$NodeId)
   for (i in 1:length(nodes)) {
     file_name = paste("nodes_",nodes[i],".png", sep="")
     #  png(file_name, width=1800, height=1200)
