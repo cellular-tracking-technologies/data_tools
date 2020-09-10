@@ -13,6 +13,7 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
   time = "UTC"
 
   dfs <- function(x) {lapply(x, function(i) { #cols=NULL
+    print(i)
     df <- tryCatch({
       if (file.size(i) > 0) {
         read.csv(i,as.is=TRUE, na.strings=c("NA", ""))
@@ -27,7 +28,7 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
         idx <- which(colnames(df)==x)
         #pre_count = nrow(df)
         #df = df[!is.na(df[,idx]),]
-        #df = df[grepl(DatePattern,df[,idx]),]
+        #
         if(any(grepl("T", df[,idx]))) {df[,idx] <- as.POSIXct(df[,idx],format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)
         } else {df[,idx] <- as.POSIXct(df[,idx], tz = "UTC", optional=TRUE)}
         #post_count = nrow(df)
@@ -35,8 +36,9 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
         vals <- df[,idx]} else {vals <- c()} 
       return(vals)})
     reformat <- which(!sapply(timecols, is.null))
-    df[,time_cols[reformat]] <- timecols[reformat]
-    
+    if(length(reformat) > 0) {
+      df[,time_cols[reformat]] <- timecols[reformat]
+      df = df[grepl(DatePattern,df[,time_cols[reformat][1]]),] } else {df <- NULL}
     #if((!is.null(cols) & !all(cols %in% colnames(df))) | !any(time_cols %in% colnames(df))) {df <- NULL}
     return(df)})
   }
