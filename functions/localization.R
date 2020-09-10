@@ -142,14 +142,14 @@ advanced_resampled_stats <- function(beeps, node, freq) {
   outdf$radius <- sapply(outdf$max_rssi, get_radius_from_rssi, DEFAULT_PATH_LOSS_COEFFICIENT)
   return(outdf)}
 
-weighted_average <- function(beeps, node, freq, MAX_NODES=0) {
+weighted_average <- function(freq, beeps, node, MAX_NODES=0) {
   df <- merge_df(beeps, node)
   zone = df$zone[1]
   letter = df$letter[1]
   filtered_df <- advanced_resampled_stats(beeps,node,freq)
   #filtered_df <- merge(filtered_df, noderssi, by="NodeId")
   filtered_df$weight <- filtered_df$beep_count
-  #filtered_df$weight <- ((filtered_df$max_rssi*-1)*filtered_df$beep_count)#/(filtered_df$V1*-1)
+  #filtered_df$weight <- filtered_df$beep_count/(filtered_df$max_rssi*-1)#(filtered_df$V1*-1)
   filtered_df$num_x <- filtered_df$node_x*filtered_df$weight
   filtered_df$num_y <- filtered_df$node_y*filtered_df$weight
   filtered_df <- filtered_df[order(filtered_df$TagId, filtered_df$RadioId, filtered_df$freq, -filtered_df$max_rssi),]
@@ -167,3 +167,9 @@ weighted_average <- function(beeps, node, freq, MAX_NODES=0) {
   outdf$zone <- zone
   outdf$letter <- letter
   return(outdf)}
+
+export_locs <- function(y, beeps, node, outpath) {
+  lapply(y, function(x) {
+    locations <- weighted_average(x, beeps, node)
+    write.csv(locations,gsub(" ", "", paste(outpath,"estimates_",x,".csv",sep=""), fixed = TRUE))})
+}

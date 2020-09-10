@@ -12,7 +12,9 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
   DatePattern = '^[[[:digit:]]{4}-[[[:digit:]]{2}-[[[:digit:]]{2}[T, ][[[:digit:]]{2}:[[[:digit:]]{2}:[[[:digit:]]{2}(.[[[:digit:]]{3})?[Z]?'
   time = "UTC"
 
-  dfs <- function(x) {lapply(x, function(i) { #cols=NULL
+  dfs <- function(x,y) {
+    correctn <- y
+    lapply(x, function(i) { #cols=NULL
     print(i)
     df <- tryCatch({
       if (file.size(i) > 0) {
@@ -21,7 +23,6 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
         # error handler picks up where error was generated
         print(paste("Read.table didn't work!:  ",err))
       })
-    
     time_cols <- c("Time", "RecordedAt", "recorded.at", "gps.at")
     timecols <- lapply(time_cols, function(x) {
       if(x %in% colnames(df)) {
@@ -38,13 +39,16 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
     reformat <- which(!sapply(timecols, is.null))
     if(length(reformat) > 0) {
       df[,time_cols[reformat]] <- timecols[reformat]
-      df = df[grepl(DatePattern,df[,time_cols[reformat][1]]),] } else {df <- NULL}
+      df = df[grepl(DatePattern,df[,time_cols[reformat][1]]),] } 
+    ncols <- unname(apply(df,1,length))
+    df <- df[which(ncols == correctn),]
+    #else {df <- NULL}
     #if((!is.null(cols) & !all(cols %in% colnames(df))) | !any(time_cols %in% colnames(df))) {df <- NULL}
     return(df)})
   }
   
-  df_merge <- function(files, cols=NULL) {
-    df_list <- dfs(files) #, cols
+  df_merge <- function(files, y, cols=NULL) {
+    df_list <- dfs(files, y) #, cols
     remove <- which(!sapply(df_list, is.data.frame))*-1
     if (length(remove) > 0) {df_list <- df_list[remove]} 
     if (length(df_list) > 0) {
@@ -55,12 +59,12 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
         if(!is.null(starttime) & inherits(starttime, "POSIXct")) {
           attr(starttime, "tzone") <- "UTC"
           df <- df[df$Time > starttime,]
-        }
+          }
         if(!is.null(endtime) & inherits(endtime, "POSIXct")) {
           attr(endtime, "tzone") <- "UTC"
           df <- df[df$Time < endtime,]
-        }
-        } else if("recorded.at" %in% colnames(df)) {
+          }
+      } else if("recorded.at" %in% colnames(df)) {
         df <- df[order(df$recorded.at),]
         if(!is.null(starttime) & inherits(starttime, "POSIXct")) {
           attr(starttime, "tzone") <- "UTC"
@@ -76,19 +80,19 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
         df <- df[!duplicated(df$ID),]
         df$ID <- NULL
       }
-      if("NodeId" %in% colnames(df)) {df$NodeId <- toupper(df$NodeId)}} else {df <- data.frame()}
+      if("NodeId" %in% colnames(df)) {df$NodeId <- toupper(df$NodeId)}} #else {df <- data.frame()}
   return(df)}
   
-  beep_data <- df_merge(beep_files, c("Time", "RadioId", "TagId", "NodeId"))
+  beep_data <- df_merge(beep_files, 6, c("Time", "RadioId", "TagId", "NodeId"))
   #beep_data$RadioId <- as.integer(beep_data$RadioId)
 
 #what this does differently here is also checks for and removes records with NA times or times that don't fit the format
 #also converts RecordedAt column to POSIXct
-  health_data <- df_merge(list.files(directory_name, pattern = health_pattern, full.names = TRUE, recursive = TRUE), c("Time", "RadioId", "NodeId"))
+  health_data <- df_merge(list.files(directory_name, pattern = health_pattern, full.names = TRUE, recursive = TRUE), 13, c("Time", "RadioId", "NodeId"))
   #health_data$RadioId <- as.integer(health_data$RadioId)
 
 #this also converts Time to POSIXct, removes records that have NA time or don't fit the format
-  gps_data <- df_merge(list.files(directory_name, pattern = gps_pattern, full.names = TRUE, recursive = TRUE))
+  gps_data <- df_merge(list.files(directory_name, pattern = gps_pattern, full.names = TRUE, recursive = TRUE), 9)
   #gps_data$latitude <- as.numeric(gps_data$latitude)
   #gps_data$longitude <- as.numeric(gps_data$longitude)
   #gps_data$altitude <- as.numeric(gps_data$altitude)
