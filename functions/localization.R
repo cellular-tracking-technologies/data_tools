@@ -171,7 +171,7 @@ weighted_average <- function(freq, beeps, node, MAX_NODES=0) {
 export_locs <- function(y, beeps, node, outpath) {
   lapply(y, function(x) {
     locations <- weighted_average(x, beeps, node)
-    write.csv(locations,gsub(" ", "", paste(outpath,"estimates_",x,".csv",sep=""), fixed = TRUE))})
+    write.csv(locations,paste(outpath,gsub(" ", "", paste("estimates_",x,".csv",sep=""), fixed = TRUE)))})
 }
 
 node_file <- function(health) {
