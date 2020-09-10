@@ -8,16 +8,18 @@ source("functions/node_health.R")
 #This points to a directory that ONLY has your downloaded data from the sensor station.
 #It can contain any/all of your downloaded data files, just don't manipulate/add your own unrelated/altered files.
 #Unzip any zipped directories therein, but compressed csv files (csv.gz) don't need to be unzipped
-infile <- "../owl-dataset"
+infile <- "../data/wetlands"
 outpath <- "../plots/"
 
 freq <- "1 hour" #interval to summarize node health indicators of interest
 
+
+longitude <- -81.73625912
+latitude <- 27.59905438
+
+## if you want tide-based viz on your graphs, un-comment the tide.R function line in the header of node_health.R & all needed packages
+#change tides to TRUE here
 ##you can find your closest location here: https://tides.mobilegeographics.com/ and click to display the tide chart
-## if you want tide-based viz on your graphs, un-comment the tide.R function line in the header of node_health.R & all needed packages, change tides to TRUE here
-#set your lat/long
-longitude <- -74.913680
-latitude <- 39.000926
 tides = FALSE
 
 #Optional parameters: start time of your data of interest, end time.
@@ -29,18 +31,21 @@ tides = FALSE
 #tags <- c("61526633")
 #start_time = as.POSIXct("2020-07-30 12:00:00", tz = "America/New_York")
 #end_time = as.POSIXct("2020-08-20 12:00:00", tz = "America/New_York")
-all_data <- load_data(infile, endtime=as.POSIXct("2020-08-05", tz="UTC")) #starttime, tags
+all_data <- load_data(infile) #starttime, tags, endtime=
 #set arguments if you choose to subset by date or tags
 ####################################################################################
 
 beep_data <- all_data[[1]]
 beep_data <- beep_data[complete.cases(beep_data), ]
 health_data <- all_data[[2]]
+health_data <- health_data[!is.na(health_data$Time), ]
+health_data <- health_data[!is.na(health_data$RecordedAt), ]
+health_data$timediff <- health_data$Time - health_data$RecordedAt
 gps_data <- all_data[[3]]
 
 #put your beep files straight off the node each into a folder corresponding to the node ID
 #put all of these node ID folders into a folder, which is where "indir" should be pointed
-infile <- "../test/experiment/NodeCSV"
+infile <- "../data/test/experiment/NodeCSV"
 my_node_data <- load_node_data(infile)
 
 #UNCOMMENT AND RUN THE export_data() FUNCTION below IF YOU WANT OUTPUT CSV FILES
@@ -71,11 +76,16 @@ radionode_plots <- node_channel_plots(plotting_data, ids)
 
 ###FOR V2 STATIONS ONLY
 nodes <- unique(health_data$NodeId)
-#produces a list of a plot per node showing if/when time stamp on sending vs. receiving mismatches occur, and if there are NA values
-#you can index the list by the vector of node x ID combos passed to it
-mynodes <- node_plots(health_data, nodes)
-#for instance mynodes[[1]] corresponds to the plot for nodes[1]
+#produces a list of plots per node showing if/when time stamp on sending vs. receiving mismatches occur, and if there are NA values
+#you can index the list by the vector of nodes passed to it
+mynodes <- node_plots(health_data,nodes)
+#90649225 is min time diff to get to 2017
+#for instance mynodes[[1]] corresponds to the plots for nodes[1]
+
+#PLOT INDICES
+#1. time mismatches (i.e. indicates when a GPS fix was likely lost)
+#2. smaller time delays
 
 #call the export_node_plots() function to output the plots looking for time stamp mismatches
 #the resulting plots will be in "outpath" named "nodes_<node>.png"
-#export_node_plots(health_data,outpath)
+export_node_plots(health_data,outpath)

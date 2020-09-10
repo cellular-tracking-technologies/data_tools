@@ -26,6 +26,7 @@ require(data.table)
 require(ggplot2)
 require(tidyr)
 require(gridExtra)
+require(suncalc)
 #BELOW REQUIRED FOR TIDE CALCULATIONS
 #require(rvest)
 #library(stringr)
@@ -107,7 +108,19 @@ return(outplots)}
 
 #ONLY FOR V2 STATIONS
 node_plots <- function(health, nodes) {
+  lat <- health$Latitude[1]
+  lon <- health$Longitude[1]
+  minday <- as.Date(min(health$Time))
+  maxday <- as.Date(max(health$Time))
+  sun <- getSunlightTimes(date=seq.Date(minday,maxday,by=1), keep=c("dawn", "dusk"), lat=lat, lon=lon)
+
+  #health$altitude <- sun$altitude[match(health$Time, sun$date)]
+  #health$light <- "day"
+  #health[health$altitude < 0,]$light <- "night"
+  health$timediff <- health$Time - health$RecordedAt
+  biggest <- as.integer(max(health$timediff[health$timediff < 100000000]))
   plots <- lapply(nodes, function(park) {
+    print(park)
   #ea <- plot_data[plot_data$RadioId == "2" & plot_data$NodeId == "496",]
   #ea <- plot_data[plot_data$NodeId == "496",]
     plot_data <- health[health$NodeId==park,]
@@ -116,12 +129,29 @@ node_plots <- function(health, nodes) {
     plot_data$time <- format(plot_data$Time,'%Y-%m-%d')
     plot_data$recorded <- format(plot_data$RecordedAt,'%Y-%m-%d')
     plot_data$match <- as.integer(unname(unlist(Map(identical, plot_data$time, plot_data$recorded))))
-    ea <- plot_data[!duplicated(plot_data$Time),] #not done by channel
-    p1 = ggplot() +
-      geom_point(data = ea, aes(x = Time, y = match, group=1, colour=is.na(RecordedAt))) + #colour=factor(RadioId)#position = "jitter", 
-      scale_x_datetime(date_breaks="1 week", date_labels="%b %d", limits=c(min(plot_data$Time),max(plot_data$Time))) +
-      scale_y_continuous(name="Match?", limits=c(0,1))
-  return(p1)})
+    plot_data[plot_data$match < 1,]$match <- as.integer(plot_data[plot_data$match < 1,]$timediff < 100000000)
+    plot_data$scaled <- plot_data$timediff
+    
+    #if (any(plot_data$timediff > 100000000)) {plot_data[plot_data$timediff > 100000000,]$scaled <- biggest + 2}
+    plot_data <- plot_data[!duplicated(plot_data$Time),] #not done by channel
+    ea2 <- plot_data[plot_data$match > 0,]
+    p1 = ggplot() + theme_bw() +
+      theme(axis.text=element_text(size=20),axis.title=element_text(size=30)) +
+      geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=Inf, ymax=biggest-Inf),fill='light grey') +
+      #geom_point(data = ea2, aes(x = Time, y = scaled, group=1)) + 
+      geom_point(data = plot_data, aes(x = Time, y = scaled, group=1, colour=is.na(RecordedAt))) + 
+      #colour=factor(RadioId)#position = "jitter", 
+      scale_x_datetime(date_breaks="1 week", date_labels="%b %d", limits=c(min(health$Time),max(health$Time))) +
+      #geom_hline(yintercept = biggest + 1) +
+      geom_hline(yintercept = 0) +
+      scale_y_continuous(name="Match?") #limits=c(-2,biggest+3)
+    
+    #p2 = ggplot() +
+    #  geom_point(data = ea2, aes(x = Time, y = timediff, group=1)) + #colour=factor(RadioId)#position = "jitter", 
+    #  scale_x_datetime(date_breaks="1 week", date_labels="%b %d") + #, limits=c(min(plot_data$Time),max(plot_data$Time)
+    #  scale_y_continuous(name="Mismatch") #limits=c(0,60)
+    
+  return(list(p1))})
 return(plots)}
 
 export_node_channel_plots <- function(health_data,freq="1 hour",out_path=getwd(),x=3,y=2,z=1) {
@@ -147,7 +177,10 @@ export_node_plots <- function(health_data,out_path=getwd()) {
   nodes <- unique(health_data$NodeId)
   outplots <- node_plots(health_data, nodes)
   for (i in 1:length(nodes)) {
-    file_name = paste("nodes_",nodes[i],".png", sep="")
-    #  png(file_name, width=1800, height=1200)
-    ggsave(file_name, outplots[[i]], width=6, height = 6, device="png", path=out_path)
+    file_name = paste(out_path,"nodes_",nodes[i],".png", sep="")
+    png(file_name, width=1800, height=1200)
+    #grid.arrange(outplots[[i]][[2]], outplots[[i]][[1]], nrow = 2)
+    grid.arrange(outplots[[i]][[1]], nrow = 1)
+    dev.off()
+    #ggsave(file_name, outplots[[i]][1], width=6, height = 6, device="png", path=out_path)
   }}
