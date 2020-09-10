@@ -9,13 +9,18 @@ source("functions/localization.R")
 ###EDIT THESE VALUES
 infile <- "../data/owl-dataset"
 outpath <- "../output/"
-nodes <- read.csv("~/Downloads/Nodes08262020.csv", as.is=TRUE, na.strings=c("NA", "")) #uppercase node letters
+
 tags <- read.csv("~/Downloads/Tags.csv", as.is=TRUE, na.strings=c("NA", "")) #uppercase node letters
 
 all_data <- load_data(infile)
 beep_data <- all_data[[1]]
 beep_data <- beep_data[beep_data$Time > as.POSIXct("2020-08-10"),]
-#beep_data <- beep_data[beep_data$NodeId %in% c("326317", "326584", "3282fa", "3285ae", "3288f4"),]
+
+nodes <- node_file(all_data[[2]])
+###looking for a file with the column names NodeId, lat, lng IN THAT ORDER
+nodes <- read.csv("~/Downloads/Nodes08262020.csv", as.is=TRUE, na.strings=c("NA", "")) #uppercase node letters
+
+beep_data <- beep_data[beep_data$NodeId %in% nodes$NodeId,] #c("326317", "326584", "3282fa", "3285ae", "3288f4")
 
 ###UNCOMMENT THESE AND FILL WITH YOUR DESIRED VALUES IF YOU WANT YOUR OUTPUT AS ONLY A SUBSET OF THE DATA
 #channel <- a vector of RadioId value(s)

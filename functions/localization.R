@@ -173,3 +173,13 @@ export_locs <- function(y, beeps, node, outpath) {
     locations <- weighted_average(x, beeps, node)
     write.csv(locations,gsub(" ", "", paste(outpath,"estimates_",x,".csv",sep=""), fixed = TRUE))})
 }
+
+node_file <- function(health) {
+  health <- health[!is.na(health$Latitude),]
+  health$timediff <- as.integer(health$Time - health$RecordedAt)
+  health <- health[health$timediff < 1,]
+  health <- health[!duplicated(health$NodeId),]
+  health <- health[,c("NodeId","Latitude","Longitude")]
+  colnames(health)[colnames(health)=="Latitude"] <- "lat"
+  colnames(health)[colnames(health)=="Longitude"] <- "lng"
+return(health)}
