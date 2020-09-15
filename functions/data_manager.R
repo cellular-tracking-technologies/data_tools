@@ -1,6 +1,11 @@
+list.of.packages <- c("data.table")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
 library(data.table)
 #directory_name <- "../test/V1"
-load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags=NULL) {
+load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NULL) {
+  if (is.null(directory_name)) stop("expected an argument to specify the directory")
   beep_pattern <- '*-data*.*csv*'
   #fancy = '.*CTT-(?P<station_id>[a-fA-F0-9]{12})-(?P<filetype>[a-zA-Z-_]+)+' test if this in correct type of expression gets files
   gps_pattern = '*-gps*.*csv*'
@@ -8,47 +13,87 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
 
 #"""load data files from a directory that contains all the compressed (or uncompressed) data files straight off the station"""
   beep_files <- list.files(directory_name, pattern = beep_pattern, full.names = TRUE, recursive = TRUE)
-  beep_files <- beep_files[grep("^(?=.*data)(?!.*(node|log|gps))", beep_files, perl=TRUE)]
+  beep <- beep_files[grep("^(?=.*data)(?!.*(node|log|gps))", beep_files, perl=TRUE)]
   DatePattern = '^[[[:digit:]]{4}-[[[:digit:]]{2}-[[[:digit:]]{2}[T, ][[[:digit:]]{2}:[[[:digit:]]{2}:[[[:digit:]]{2}(.[[[:digit:]]{3})?[Z]?'
   time = "UTC"
 
-  dfs <- function(x,y) {
-    correctn <- y
-    lapply(x, function(i) { #cols=NULL
-    print(i)
-    df <- tryCatch({
-      if (file.size(i) > 0) {
-        read.csv(i,as.is=TRUE, na.strings=c("NA", ""))
-      }}, error = function(err) {
-        # error handler picks up where error was generated
-        print(paste("Read.table didn't work!:  ",err))
-      })
+  dfs <- function(x,y,z=NULL) {
+    known <- c("Time","RadioId","TagId","TagRSSI","NodeId","Validated","NodeRSSI","Battery","Celsius","RecordedAt", "Firmware","SolarVolts","SolarCurrent","CumulativeSolarCurrent","Latitude","Longitude","recorded.at",
+               "gps.at","latitude","longitude","altitude","quality","mean.lat","mean.lng","n.fixes")
     time_cols <- c("Time", "RecordedAt", "recorded.at", "gps.at")
-    timecols <- lapply(time_cols, function(x) {
-      if(x %in% colnames(df)) {
-        idx <- which(colnames(df)==x)
-        #pre_count = nrow(df)
-        #df = df[!is.na(df[,idx]),]
-        #
-        if(any(grepl("T", df[,idx]))) {df[,idx] <- as.POSIXct(df[,idx],format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)
-        } else {df[,idx] <- as.POSIXct(df[,idx], tz = "UTC", optional=TRUE)}
-        #post_count = nrow(df)
-        #delta = pre_count - post_count
-        vals <- df[,idx]} else {vals <- c()} 
-      return(vals)})
-    reformat <- which(!sapply(timecols, is.null))
-    if(length(reformat) > 0) {
-      df[,time_cols[reformat]] <- timecols[reformat]
-      df = df[grepl(DatePattern,df[,time_cols[reformat][1]]),] } 
-    ncols <- unname(apply(df,1,length))
-    df <- df[which(ncols == correctn),]
+    listdf <- lapply(x, function(i) { #cols=NULL
+      print(paste("merging file:", i))
+      indx <- count.fields(i, sep=",")
+      df <- tryCatch({
+      if (file.size(i) > 0) {
+        read.csv(i,as.is=TRUE, na.strings=c("NA", ""), header=TRUE, skipNul = TRUE, colClasses=c("NodeId"="character","TagId"="character"))
+      }}, error = function(err) {
+        # error handler picks up where error was generated, in Bob's script it breaks if header is missing
+        print(paste("ignoring file", i, "- no data"))
+      })
+      
+      if(is.data.frame(df)) {
+        v <- ifelse(any(grepl("T",df[,which(time_cols %in% colnames(df))])), 1, 2)
+        if (!is.null(z)) {v <- z}
+        print(v)
+        if (y=="beep" & v < 2) {
+          correct <- 5
+        } else if (y == "beep" & v > 1) {
+          correct <- 6
+        } else if (y=="node" & v < 2) {
+          correct <- 6
+        } else if (y=="node" & v > 1) {
+          correct <- 13
+        } else if (y=="gps" & v < 2) {
+          correct <- 6
+        } else {
+          correct <- 9
+        }
+        
+        df <- df[which(indx == correct),]
+        df <- df[-which(row.names(df)=="NA"),]
+        df <- df[,colnames(df) %in% known]
+      }
+      
+      tryCatch({
+        timecols <- lapply(time_cols, function(x) {
+          if(x %in% colnames(df)) {
+            idx <- which(colnames(df)==x)
+            #pre_count = nrow(df)
+            if(any(grepl("T", df[,idx]))) {
+              vals <- as.POSIXct(df[,idx],format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)
+            } else {
+              vals <- as.POSIXct(df[,idx], tz = "UTC", optional=TRUE)}
+            #post_count = nrow(df)
+            #delta = pre_count - post_count
+          } else {vals <- c()} 
+          return(vals)})
+        
+        reformat <- which(!sapply(timecols, is.null))
+        df[,time_cols[reformat]] <- timecols[reformat]
+        pre <- nrow(df)
+        df = df[grepl(DatePattern,df[,time_cols[reformat][1]]),]
+        df = df[complete.cases(df[,time_cols[reformat]]),]
+        post <- nrow(df)
+        delta = pre - post
+        if (delta > 0) {print(paste("dropped", delta,"bad time format records"))}
+        }, error = function(err) {
+          # error handler picks up where error was generated, in Bob's script it breaks if header is missing
+          print(paste("error merging file:",i, err))
+        })
+
+    #df <- df[which(ncol(df) == correctn),] how to check to see if number of fields in each row is the same?
     #else {df <- NULL}
     #if((!is.null(cols) & !all(cols %in% colnames(df))) | !any(time_cols %in% colnames(df))) {df <- NULL}
     return(df)})
-  }
+  return(list(listdf, v))}
   
-  df_merge <- function(files, y, cols=NULL) {
-    df_list <- dfs(files, y) #, cols
+  df_merge <- function(files, z=NULL, cols=NULL) {
+    p1name <- deparse(substitute(files))
+    print(p1name)
+    df_lists <- dfs(files, p1name, z)
+    df_list <- df_lists[[1]]#, cols
+    version <- df_lists[[2]]
     remove <- which(!sapply(df_list, is.data.frame))*-1
     if (length(remove) > 0) {df_list <- df_list[remove]} 
     if (length(df_list) > 0) {
@@ -80,19 +125,43 @@ load_data <- function(directory_name=getwd(), starttime=NULL, endtime=NULL, tags
         df <- df[!duplicated(df$ID),]
         df$ID <- NULL
       }
-      if("NodeId" %in% colnames(df)) {df$NodeId <- toupper(df$NodeId)}} #else {df <- data.frame()}
-  return(df)}
+      if("NodeId" %in% colnames(df)) {
+        df$NodeId <- toupper(df$NodeId)
+        df$NodeId <- sub("^0+", "", df$NodeId)}} #else {df <- data.frame()}
+  return(list(df, version))}
   
-  beep_data <- df_merge(beep_files, 6, c("Time", "RadioId", "TagId", "NodeId"))
+  len <- length(beep)
+  if (len > 0) {
+    print(paste("preparing",len,"beep files for merge from",directory_name,"using the regex", "^(?=.*data)(?!.*(node|log|gps))"))
+    beep_dataset <- df_merge(beep, cols=c("Time", "RadioId", "TagId", "NodeId"))
+    beep_data <- beep_dataset[[1]]
+    version <- beep_dataset[[2]]
+  } else print("no beep files found in directory")
   #beep_data$RadioId <- as.integer(beep_data$RadioId)
 
 #what this does differently here is also checks for and removes records with NA times or times that don't fit the format
 #also converts RecordedAt column to POSIXct
-  health_data <- df_merge(list.files(directory_name, pattern = health_pattern, full.names = TRUE, recursive = TRUE), 13, c("Time", "RadioId", "NodeId"))
+  node <- list.files(directory_name, pattern = health_pattern, full.names = TRUE, recursive = TRUE)
+  len <- length(node)
+  if (len > 0) {
+    print(paste("preparing",len,"node health files for merge"))
+    health_dataset <- df_merge(node, cols=c("Time", "RadioId", "NodeId"))
+    health_data <- health_dataset[[1]]
+    version <- health_dataset[[2]]
+  } else {
+    print("no node health files found in directory")
+    health_data <- data.frame()}
   #health_data$RadioId <- as.integer(health_data$RadioId)
 
 #this also converts Time to POSIXct, removes records that have NA time or don't fit the format
-  gps_data <- df_merge(list.files(directory_name, pattern = gps_pattern, full.names = TRUE, recursive = TRUE), 9)
+  gps <- list.files(directory_name, pattern = gps_pattern, full.names = TRUE, recursive = TRUE)
+  len <- length(gps)
+  if (len > 0) {
+    print(paste("preparing",len,"gps files for merge"))
+    gps_data <- df_merge(gps,version)[[1]]
+  } else { 
+    print("no gps files found in directory")
+    gps_data <- data.frame()}
   #gps_data$latitude <- as.numeric(gps_data$latitude)
   #gps_data$longitude <- as.numeric(gps_data$longitude)
   #gps_data$altitude <- as.numeric(gps_data$altitude)
@@ -109,10 +178,10 @@ load_node_data <- function(infile) {
   Sam3 <- lapply(files, function(x) {
     df <- tryCatch({
       if (file.size(x) > 0) {
-        read.csv(x,as.is=TRUE, na.strings=c("NA", ""))
+        read.csv(x,as.is=TRUE, na.strings=c("NA", ""), colClasses=c("id"="character"))
       }}, error = function(err) {
         # error handler picks up where error was generated
-        print(paste("Read.table didn't work!:  ",err))
+        print("ignoring file", x, "- no data")
       })
     #if(!all((c("time", "id", "rssi") %in% colnames(df)))) {df <- NULL}
     return(df)})

@@ -8,7 +8,7 @@ source("functions/node_health.R")
 #This points to a directory that ONLY has your downloaded data from the sensor station.
 #It can contain any/all of your downloaded data files, just don't manipulate/add your own unrelated/altered files.
 #Unzip any zipped directories therein, but compressed csv files (csv.gz) don't need to be unzipped
-infile <- "../data/wetlands"
+infile <- "../data/test/V1"
 outpath <- "../plots/"
 
 freq <- "1 hour" #interval to summarize node health indicators of interest
@@ -38,9 +38,7 @@ all_data <- load_data(infile) #starttime, tags, endtime=
 beep_data <- all_data[[1]]
 beep_data <- beep_data[complete.cases(beep_data), ]
 health_data <- all_data[[2]]
-health_data <- health_data[!is.na(health_data$Time), ]
-health_data <- health_data[!is.na(health_data$RecordedAt), ]
-health_data$timediff <- health_data$Time - health_data$RecordedAt
+#health_data$timediff <- health_data$Time - health_data$RecordedAt
 gps_data <- all_data[[3]]
 
 #put your beep files straight off the node each into a folder corresponding to the node ID
