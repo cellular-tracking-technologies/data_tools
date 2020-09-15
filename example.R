@@ -8,7 +8,7 @@ source("functions/node_health.R")
 #This points to a directory that ONLY has your downloaded data from the sensor station.
 #It can contain any/all of your downloaded data files, just don't manipulate/add your own unrelated/altered files.
 #Unzip any zipped directories therein, but compressed csv files (csv.gz) don't need to be unzipped
-infile <- "../data/test/V1"
+infile <- "../data/DATA-20200911T200454Z-001"
 outpath <- "../plots/"
 
 freq <- "1 hour" #interval to summarize node health indicators of interest
@@ -70,13 +70,13 @@ radionode_plots <- node_channel_plots(plotting_data, ids)
 ## if you want to write out plot images...
 #call the function "export_node_channel_plots(health,outpath,x,y,z)" replacing x, y, z with the integer index of the plot desired for each of the 3 panels
 #the resulting plots will be in "outpath" named "node_<RadioId>_<NodeId>.png"
-#export_node_channel_plots(health_data,freq,outpath,3,2,1)
+export_node_channel_plots(health_data,freq,outpath,3,2,1)
 
 ###FOR V2 STATIONS ONLY
 nodes <- unique(health_data$NodeId)
 #produces a list of plots per node showing if/when time stamp on sending vs. receiving mismatches occur, and if there are NA values
 #you can index the list by the vector of nodes passed to it
-mynodes <- node_plots(health_data,nodes)
+#mynodes <- node_plots(health_data,nodes)
 #90649225 is min time diff to get to 2017
 #for instance mynodes[[1]] corresponds to the plots for nodes[1]
 
@@ -86,4 +86,4 @@ mynodes <- node_plots(health_data,nodes)
 
 #call the export_node_plots() function to output the plots looking for time stamp mismatches
 #the resulting plots will be in "outpath" named "nodes_<node>.png"
-export_node_plots(health_data,outpath)
+#export_node_plots(health_data,outpath)

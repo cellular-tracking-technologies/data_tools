@@ -21,6 +21,9 @@ options(scipen = 6, digits = 9) # I prefer to view outputs in non-scientific not
 ## ---------------------------
 
 ## load up the packages we will need:  (un-comment as required)
+list.of.packages <- c("ggplot2", "tidyr", "gridExtra", "suncalc")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
 
 require(data.table)
 require(ggplot2)
@@ -45,7 +48,7 @@ source("functions/data_manager.R")
 #operations for each unique combination of channel and node, summarized by the specified time interval 
 summarize_health_data <- function(health, freq) {
   health$ID <- paste(health$RadioId, health$NodeId, sep="_")  
-  node <- setDT(health)[, .(batt = mean(Battery), RSSI = mean(NodeRSSI), V = mean(SolarVolts), A = mean(SolarCurrent), .N), by = .(cut(Time, freq),ID)]
+  node <- setDT(health)[, .(batt = mean(Battery), RSSI = mean(NodeRSSI), .N), by = .(cut(Time, freq),ID)] #V = mean(SolarVolts), A = mean(SolarCurrent), 
 #filling missing time intervals with NA values for visualization
   plot_data <- as.data.frame(complete(node,cut,ID))
 #putting the newly summarized time intervals back into the correct data format
@@ -84,8 +87,11 @@ node_channel_plots <- function(plot_data,filenames) {
   #+ scale_y_continuous(name="Count", limits=c(-110,-45))
 
 #battery
-    p = ggplot(data = ea, aes(x = Time, y = batt, group=1)) + 
-    geom_line() +
+    batt <- data.frame(x1 = head(ea$Time, -1), x2 = tail(ea$Time, -1) , 
+                       y1 = head(ea$batt, -1), y2 = tail(ea$batt, -1))
+    batt$col <- cut(batt$y1, c(0,3.7, 4, Inf))
+    p = ggplot(data = batt, aes(x = x1, y = y1, xend = x2, yend = y2, group=1, colour=col)) + 
+    geom_segment(size=2) +
     scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(health_data$Time), max(health_data$Time))) +
     theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
     scale_y_continuous(name="Batt", limits=c(2,5))
@@ -105,6 +111,10 @@ node_channel_plots <- function(plot_data,filenames) {
   
   return(list(p1,p,p2,p3))})
 return(outplots)}
+
+#summary_v2 <- function(x) {
+#  
+#}
 
 #ONLY FOR V2 STATIONS
 node_plots <- function(health, nodes) {

@@ -3,7 +3,7 @@ new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"
 if(length(new.packages)) install.packages(new.packages)
 
 library(data.table)
-#directory_name <- "../test/V1"
+#directory_name <- "../data/test/V1"
 load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NULL) {
   if (is.null(directory_name)) stop("expected an argument to specify the directory")
   beep_pattern <- '*-data*.*csv*'
@@ -18,6 +18,9 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
   time = "UTC"
 
   dfs <- function(x,y,z=NULL) {
+    print(x)
+    print(y)
+    print(z)
     known <- c("Time","RadioId","TagId","TagRSSI","NodeId","Validated","NodeRSSI","Battery","Celsius","RecordedAt", "Firmware","SolarVolts","SolarCurrent","CumulativeSolarCurrent","Latitude","Longitude","recorded.at",
                "gps.at","latitude","longitude","altitude","quality","mean.lat","mean.lng","n.fixes")
     time_cols <- c("Time", "RecordedAt", "recorded.at", "gps.at")
@@ -85,15 +88,15 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
     #df <- df[which(ncol(df) == correctn),] how to check to see if number of fields in each row is the same?
     #else {df <- NULL}
     #if((!is.null(cols) & !all(cols %in% colnames(df))) | !any(time_cols %in% colnames(df))) {df <- NULL}
-    return(df)})
-  return(list(listdf, v))}
+    return(list(df, v))})
+  return(listdf)}
   
-  df_merge <- function(files, z=NULL, cols=NULL) {
+  df_merge <- function(files, z=NULL, cols=NULL, starttime = NULL, endtime = NULL) {
     p1name <- deparse(substitute(files))
     print(p1name)
-    df_lists <- dfs(files, p1name, z)
-    df_list <- df_lists[[1]]#, cols
-    version <- df_lists[[2]]
+    df_lists <- dfs(x=files, y=p1name, z=z)
+    df_list <- lapply(df_lists, `[[`, 1)#, cols
+    version <- df_lists[[1]][[2]]
     remove <- which(!sapply(df_list, is.data.frame))*-1
     if (length(remove) > 0) {df_list <- df_list[remove]} 
     if (length(df_list) > 0) {
@@ -158,7 +161,8 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
   len <- length(gps)
   if (len > 0) {
     print(paste("preparing",len,"gps files for merge"))
-    gps_data <- df_merge(gps,version)[[1]]
+    gps_dataset <- df_merge(gps,z=version)
+    gps_data <- gps_dataset[[1]]
   } else { 
     print("no gps files found in directory")
     gps_data <- data.frame()}
