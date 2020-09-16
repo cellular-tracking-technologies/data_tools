@@ -26,7 +26,7 @@ filename <- "output.csv"
 #EXAMPLE POSSIBLE VALUES
 tag_id <- c("52784C2D") #tags$TagId
 #
-#channel <- c(2)
+channel <- c(2)
 freq <- "5 min"
 
 max_nodes <- 0 #how many nodes should be used in the localization calculation?
