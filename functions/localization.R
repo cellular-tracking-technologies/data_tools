@@ -191,9 +191,11 @@ node_file <- function(health) {
   health$timediff <- as.integer(health$Time - health$RecordedAt)
   health <- health[health$timediff < 1,]
   health <- aggregate(health[,c("Latitude", "Longitude")],list(health$NodeId), mean, na.rm=TRUE)
-  health <- health[-which(is.na(health$Latitude) | is.na(health$Latitude)),]
+  if (any(is.na(health))) {health <- health[-which(is.na(health$Latitude) | is.na(health$Latitude)),]}
+  #
   colnames(health)[colnames(health)=="Latitude"] <- "lat"
   colnames(health)[colnames(health)=="Longitude"] <- "lng"
+  colnames(health)[colnames(health)=="Group.1"] <- "NodeId"
 return(health)}
 
 export_node <- function(health, out_path) {

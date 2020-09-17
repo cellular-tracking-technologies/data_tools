@@ -61,6 +61,6 @@ my_nodes <- st_as_sf(nodes_spatial)
 ggplot() + 
   #geom_point(data=my_locs, aes(x=long,y=lat))
   #  ggmap(ph_basemap) +
-  geom_sf(data = locs, aes(colour=TagId), inherit.aes = FALSE) + 
+  #geom_sf(data = locs, aes(colour=TagId), inherit.aes = FALSE) + 
   geom_sf(data = my_nodes) +
   geom_text(data = nodes, aes(x=lng, y=lat, label = NodeId), size = 5)
