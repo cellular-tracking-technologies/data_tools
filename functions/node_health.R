@@ -49,6 +49,8 @@ source("functions/data_manager.R")
 #operations for each unique combination of channel and node, summarized by the specified time interval 
 summarize_health_data <- function(health, freq) {
   health$ID <- paste(health$RadioId, health$NodeId, sep="_")  
+  health$time <- cut(health_data$Time, freq)
+  health$timebin <- as.POSIXct(health$time)
   node <- setDT(health)[, .(batt = mean(Battery), RSSI = mean(NodeRSSI), .N), by = .(cut(Time, freq),ID)] #V = mean(SolarVolts), A = mean(SolarCurrent), 
   node$col <- cut(node$batt, c(0,3.7, 4, Inf))
   #node$color <- "#FF0000"
@@ -66,11 +68,12 @@ summarize_health_data <- function(health, freq) {
 #  boxp <- ggplot(each, aes(factor(ID), NodeRSSI)) + geom_boxplot()# + facet_wrap(~ID, scale="free")
 #  ggsave(boxp, file=paste("boxp_",j, ".png", sep=''), scale=2)
 #}
-return(plot_data)}
+return(list(plot_data, health))}
 
 v2_health_data <- function(health, freq) {
   health$ID <- paste(health$RadioId, health$NodeId, sep="_")  
   health$time <- cut(health_data$Time, freq)
+  health$timebin <- as.POSIXct(health$time)
   node <- setDT(health)[, .(batt = mean(Battery), RSSI = mean(NodeRSSI), A = mean(SolarCurrent), Lat = mean(Latitude), 
                             Lon = mean(Longitude), std_lat = sd(Latitude), std_lon = sd(Longitude), .N), by = .(cut(Time, freq),ID)] #V = mean(SolarVolts), , 
   node$col <- cut(node$batt, c(0,3.7, 4, Inf))
@@ -79,6 +82,7 @@ v2_health_data <- function(health, freq) {
   node$lowlon <- node$Lon - node$std_lon
   node$uplon <- node$Lon + node$std_lon
   node$d <- distVincentyEllipsoid(cbind(node$lowlon, node$lowlat), cbind(node$uplon, node$uplat))
+  node$d <- (node$d)/1000
   #node$color <- "#FF0000"
   #node[node$col=="(4,Inf]",]$color <- "#00FF00"
   #node[node$col=="(3.7,4]",]$color <-  "#F5B041" 
@@ -104,9 +108,13 @@ gps_data_summary <- function(gps, freq) {
 return(node)}
 
 #inspect this to find the index if you want to pull plots from the list for an ID x channel combo
-node_channel_plots <- function(plot_data, filenames) { #freq, 
+node_channel_plots <- function(health, freq) { #freq, 
   #time <- unlist(strsplit(freq, " "))
   #a <- as.difftime(as.integer(time[1]), unit=time[2])
+  plot_dataset <- summarize_health_data(health, freq)
+  plot_data <- plot_dataset[[1]]
+  health_df <- plot_dataset[[2]]
+  filenames <- unique(plot_data$ID)
   outplots <- lapply(filenames, function(park) {
 #ea <- plot_data[plot_data$RadioId == "2" & plot_data$NodeId == "328b99",]
 #this is for scaling, in order to look for patterns in RSSI in relation to other variables
@@ -118,6 +126,8 @@ node_channel_plots <- function(plot_data, filenames) { #freq,
     ea <- ea[-nrow(ea),]
     batt <- data.frame(x1 = head(ea$Time, -1), x2 = tail(ea$Time, -1), y1 = head(ea$batt, -1), y2 = tail(ea$batt, -1),
                        col = head(ea$col, -1))
+    
+    health_node <- health_df[health_df$ID==park,]
 #RSSI scatter plot, A&V lines commented out    
     p1 = ggplot() + theme_bw() +
       #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
@@ -141,9 +151,10 @@ node_channel_plots <- function(plot_data, filenames) { #freq,
         theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), legend.position = "none", axis.text=element_text(size=20),
               axis.title=element_text(size=30,face="bold")) +
         scale_y_continuous(name="Batt", limits=c(2,5))
-    
-    boxp <- ggplot(ea, aes(Time, SolarCurrent)) + geom_boxplot()# + facet_wrap(~ID, scale="free")
-
+    ea <- ea[order(ea$cut),]
+    boxp2 <- ggplot() + 
+      #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
+      geom_boxplot(data=health_node, aes(timebin, NodeRSSI, group=time))# + facet_wrap(~ID, scale="free")
 #number of check-ins
     p2 = ggplot(data = ea, aes(x = Time, y = N, group=1)) + theme_bw() +
       #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
@@ -177,8 +188,8 @@ v2_plots <- function(health, freq) {
   
   lat <- mean(health_df$Latitude, na.rm=TRUE)
   lon <- mean(health_df$Longitude, na.rm=TRUE)
-  minday <- as.Date(min(health$Time))
-  maxday <- as.Date(max(health$Time))
+  minday <- as.Date(min(health_df$Time))
+  maxday <- as.Date(max(health_df$Time))
   sun <- getSunlightTimes(date=seq.Date(minday,maxday,by=1), keep=c("dawn", "dusk"), lat=lat, lon=lon)
   
   filenames <- unique(plot_data$ID)
@@ -234,8 +245,9 @@ v2_plots <- function(health, freq) {
       scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(health_df$Time), max(health_df$Time)))
     
     ea <- health_df[health_df$ID==park,]
-    boxp <- ggplot(ea, aes(time, SolarCurrent)) + 
-      geom_boxplot()  #facet_wrap(~ID, scale="free")
+    boxp <- ggplot() + 
+      geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
+      geom_boxplot(data=ea, aes(timebin, SolarCurrent, group=time))  #facet_wrap(~ID, scale="free")
     #scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(health_df$Time), max(health_df$Time)))
   return(list(p1, boxp, p, p2, p3))})
 return(outplots)}
