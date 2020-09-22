@@ -189,7 +189,7 @@ export_locs <- function(y, beeps, node, outpath) {
 node_file <- function(health) {
   if (nrow(health) < 1) stop("no node health data!")
   health$timediff <- as.integer(health$Time - health$RecordedAt)
-  health <- health[health$timediff < 1,]
+  health <- health[health$timediff == 0,]
   health <- aggregate(health[,c("Latitude", "Longitude")],list(health$NodeId), mean, na.rm=TRUE)
   if (any(is.na(health))) {health <- health[-which(is.na(health$Latitude) | is.na(health$Latitude)),]}
   #

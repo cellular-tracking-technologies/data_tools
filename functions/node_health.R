@@ -314,9 +314,10 @@ gps_plots <- function(gps) {
 return(p1)}
 
 export_node_channel_plots <- function(health_data,freq="1 hour",out_path=getwd(),x=3,y=2,z=1) {
-  plotdata <- summarize_health_data(health_data, freq)
-  filenames <- unique(plotdata$ID)
-  outplot <- node_channel_plots(plotdata, filenames)
+  outplot <- node_channel_plots(health_data, freq)
+  plotdf <- summarize_health_data(health_data, freq)
+  plotdf <- plotdf[[1]]
+  filenames <- unique(plotdf$ID)
 
   for (i in 1:length(filenames)) {
     file_name = paste(out_path,"node_",filenames[i],".png", sep="")

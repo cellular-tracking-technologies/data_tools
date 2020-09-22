@@ -8,7 +8,7 @@ source("functions/node_health.R")
 #This points to a directory that ONLY has your downloaded data from the sensor station.
 #It can contain any/all of your downloaded data files, just don't manipulate/add your own unrelated/altered files.
 #Unzip any zipped directories therein, but compressed csv files (csv.gz) don't need to be unzipped
-infile <- "../data/owl-dataset"
+infile <- "../data/archbold/aug-sept20"
 outpath <- "../plots/"
 
 freq <- "1 hour" #interval to summarize node health indicators of interest
@@ -37,13 +37,15 @@ all_data <- load_data(infile) #starttime, tags, endtime=
 
 beep_data <- all_data[[1]]
 beep_data <- beep_data[complete.cases(beep_data), ]
+tags <- read.csv("../data/DATA-20200911T200454Z-001/DATA/nodes/Tags.csv", as.is=TRUE, na.strings=c("NA", ""), header=TRUE, skipNul = TRUE, colClasses=c("TagId"="character"))
+beep_data <- beep_data[beep_data$TagId %in% tags$TagId,]
 health_data <- all_data[[2]]
 #health_data$timediff <- health_data$Time - health_data$RecordedAt
 gps_data <- all_data[[3]]
 
 #put your beep files straight off the node each into a folder corresponding to the node ID
 #put all of these node ID folders into a folder, which is where "indir" should be pointed
-infile <- "../data/test/experiment/NodeCSV"
+infile <- "../data/Lauren/node"
 my_node_data <- load_node_data(infile)
 
 #UNCOMMENT AND RUN THE export_data() FUNCTION below IF YOU WANT OUTPUT CSV FILES
@@ -55,10 +57,10 @@ my_node_data <- load_node_data(infile)
 #this creates a unique ID for each combo of radio + node, summarizes node health variables for the input time interval and each unique combo of node x radio, and then...
 #...expands the data frame to NA fill for missing time x ID combos based on your time interval chosen
 plotting_data <- summarize_health_data(health_data, freq)
-ids <- unique(plotting_data$ID)
+ids <- unique(plotting_data[[1]]$ID)
 
 #this creates a nested list of diagnostic plots for each combo of node and radio ID. You can index the list by the vector of node x ID combos passed to it
-radionode_plots <- node_channel_plots(plotting_data, ids)
+radionode_plots <- node_channel_plots(health_data, freq)
 #for instance radionode_plots[[1]] corresponds to the plots for ids[1]
 
 #PLOT INDICES

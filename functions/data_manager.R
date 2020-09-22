@@ -1,8 +1,9 @@
-list.of.packages <- c("data.table")
+list.of.packages <- c("data.table", "rjson")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
 library(data.table)
+library(rjson)
 #directory_name <- "../data/test/V1"
 load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NULL) {
   if (is.null(directory_name)) stop("expected an argument to specify the directory")
@@ -177,6 +178,115 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
   if (!is.null(tags) & !is.null(beep_data) & any(tags %in% beep_data$TagId)) {beep_data <- beep_data[beep_data$TagId %in% tags,]}
 return(list(beep_data, health_data, gps_data))}
 
+Correct_Colnames <- function(df) {
+  
+  delete.columns <- grep("(^X$)|(^X\\.)(\\d+)($)", colnames(df), perl=T)
+  
+  if (length(delete.columns) > 0) {
+    
+    rowval <- gsub("^X", "",  colnames(df))
+    rowval <- gsub("^\\.", "-",  rowval)
+    rowval[3] <- as.integer(rowval[3])
+    rowval[4] <- as.integer(rowval[4])
+    rowval[6] <- as.numeric(rowval[6])
+    rowval[7] <- as.integer(rowval[7])
+    
+    colnames(df) <- c("Time", "TagId", "BitErr", "TagRSSI", "NodeId", "NodeFreq", "RadioId")
+    names(rowval) <- colnames(df)
+    df <- rbind(df, rowval)
+    
+    #X might be replaced by different characters, instead of being deleted
+  }
+  
+  return(df)
+}
+
+load_v0 <- function(infile) {
+  DatePattern = '^[[[:digit:]]{4}-[[[:digit:]]{2}-[[[:digit:]]{2}[T, ][[[:digit:]]{2}:[[[:digit:]]{2}:[[[:digit:]]{2}(.[[[:digit:]]{3})?[Z]?'
+  files <- list.files(infile, pattern = "TAG.*CSV", full.names = TRUE, recursive = TRUE)
+  listdf <- lapply(files, function(x) {
+    print(paste("adding beep file:", x))
+    df <- tryCatch({read.csv(x,as.is=TRUE, na.strings=c("NA", ""))},
+                 error = function(err) {read.csv(x,as.is=TRUE, na.strings=c("NA", ""), skip=3)})
+    df <- Correct_Colnames(df)
+    pre <- nrow(df)
+    df = df[grepl(DatePattern,df$Time),]
+    df$Time <- as.POSIXct(df$Time,format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)
+    df$TagId = toupper(df$TagId)
+    delta = pre - nrow(df)
+    if (delta > 0) {print(paste("loaded",nrow(df),"records;",delta,"failed records"))}
+  return(df)})
+  beep <- rbindlist(listdf)
+  
+  print("init health data")
+  files <- list.files(infile, pattern = "NODE.*LOG", full.names = TRUE, recursive = TRUE)
+  now = as.POSIXlt(Sys.time(), "UTC")
+  listdf <- lapply(files, function(y) {
+    print(y)
+    json_data_as_list <- readLines(y, skipNul = TRUE)
+    df <- lapply(json_data_as_list, function(x) tryCatch({fromJSON(x)},
+                   error = function(err) {
+                     print(paste("corrupt row:", x, err))
+                   return(x)}))
+    if ("imei" %in% names(df[[1]])) {df <- df[4:length(df)]}
+    valid <- df[which(sapply(df,is.list))]
+    invalid <- df[which(!sapply(df,is.list))]
+    redeem <- lapply(invalid, function(z) {
+      re <- fromJSON(paste("{",unlist(strsplit(z, "{", fixed = TRUE))[3],sep=""))
+    return(re)})
+    validated <- c(valid, redeem)
+    validated <- lapply(validated, as.data.frame)
+    validated <- rbindlist(validated)
+    pre <- nrow(validated)
+    test <- which(!grepl(DatePattern,validated$time))
+    if (length(test) > 0) {
+      failed <- validated[test,]
+      print(paste("corrupt time record", failed$time))}
+    validated = validated[grepl(DatePattern,validated$time),]
+    validated$time <- as.POSIXct(validated$time,format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)
+    delta = pre - nrow(validated)
+    if (delta > 0) {print(paste("added health file:",y,"--",nrow(validated),"valid records;",delta,"failed records"))}
+    validated$radio_id <- ifelse(any(colnames(validated)=="radioID"), as.integer(validated$radioID), 4) 
+    validated$received_at <- validated$time
+    
+    pre_n = nrow(validated)
+    df = validated[complete.cases(validated),]
+    delta = nrow(df) - pre_n
+    if (delta > 0) {print(paste(y,"dropped",delta,"null value rows"))}
+    
+    pre = nrow(df)
+    df = df[df$received_at < now,]
+    post = nrow(df)
+    
+    delta = post - pre
+    print(paste("DROPPED",delta,"RECORDS"))
+    #pick up at line 114 https://bitbucket.org/cellulartrackingtechnologies/lifetag-system-report/src/master/beeps.py?mode=edit&spa=0&at=master&fileviewer=file-view-default
+
+    return(validated)})
+  node <- rbindlist(listdf)
+  pre_n <- nrow(node)
+  node <- node[!duplicated(node),]
+  delta = pre_n - nrow(node)
+  if (delta > 0) {print(paste("dropped",delta,"duplicates"))}
+  
+return(list(beep,node))} #list(beep, node)
+
+beepreport <- function(infile, node_csv, freq, meta_freq, start=NULL, endtime=NULL) {
+  v0 <- load_v0(infile)
+  beep_data <- v0[[1]]
+  health_data <- v0[[2]]
+  node <- read.csv(node_csv)
+  if(!is.null(start) & inherits(start, "POSIXct")) {begin=start}
+  if(!is.null(endtime) & inherits(endtime, "POSIXct")) {end=endtime}
+  data_aggregate_window=freq
+  meta_aggregate_window=meta_freq
+  
+  pre = nrow(beep_data)
+  beep_data <- beep_data[complete.cases(beep_data),]
+  delta = pre - nrow(beep_data)
+  
+}
+
 load_node_data <- function(infile) {
   files <- list.files(infile, pattern = "beep*", full.names = TRUE, recursive = TRUE)
   Sam3 <- lapply(files, function(x) {
@@ -203,7 +313,7 @@ load_node_data <- function(infile) {
   nodes$Time <- as.POSIXct(nodes$time,format="%Y-%m-%dT%H:%M:%SZ",tz = time, optional=TRUE)
   #nodes <- nodes[nodes$Time > as.POSIXct("2020-08-20"),]
   nodes <- nodes[order(nodes$Time, nodes$file),]
-  nodes$RadioId <- NA
+  nodes$RadioId <- 4 #https://bitbucket.org/cellulartrackingtechnologies/lifetag-system-report/src/master/beeps.py
   nodes$TagId <- nodes$id
   nodes$TagRSSI <- as.integer(nodes$rssi)
   nodes$Validated <- NA
