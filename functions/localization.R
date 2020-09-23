@@ -1,3 +1,7 @@
+list.of.packages <- c("sp", "dplyr", "padr", "rgdal", "raster", "sf")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
 library(sp)
 library(data.table)
 library(dplyr)
@@ -5,18 +9,16 @@ library(padr)
 library(rgdal)
 library(raster)
 library(sf)
-library(ggplot2)
-library(ggmap)
 
 beep_prep <- function(df) {
   ###datafile
-  df$NodeId <- sub("^0+", "", df$NodeId)
   #NodeId, TagId must be string
-  df$NodeId <- toupper(df$NodeId)
+  ###rawbeepfile
   pre_count = nrow(df)
   df <- df[complete.cases(df), ]
   dropped_count = pre_count - nrow(df)
-  ###rawbeepfile
+  print(paste("dropped", dropped_count, "n/a records from", pre_count, "records"))
+  
   #if (dropped_count > 0) {logging.error('dropped {:,} n/a records from {:,} records'.format(dropped_count, pre_count))}
   #df = df.set_index('Time') set rownames to time?
   
@@ -97,8 +99,10 @@ merge_df <- function(beep_df, node_df) {
   df <- beep_prep(beep_df)
   nodes_df <- node_prep(node_df)
   beep_count <- nrow(df) 
-  df <- merge(df,nodes_df, by="NodeId")
+  if (any(nodes_df$NodeId %in% df$NodeId)) {
+  df <- merge(df,nodes_df, by="NodeId") } else {print("none of those nodes are in this data! node file not merged")}
   delta = beep_count - nrow(df)
+  if (delta > 0) {print(paste("dropped",delta,"records after merging node locations"))}
   if (exists("channel")) {
     df <- df[df$RadioId %in% channel,]
   }
@@ -142,14 +146,14 @@ advanced_resampled_stats <- function(beeps, node, freq) {
   outdf$radius <- sapply(outdf$max_rssi, get_radius_from_rssi, DEFAULT_PATH_LOSS_COEFFICIENT)
   return(outdf)}
 
-weighted_average <- function(beeps, node, freq, MAX_NODES=0) {
+weighted_average <- function(freq, beeps, node, MAX_NODES=0) {
   df <- merge_df(beeps, node)
   zone = df$zone[1]
   letter = df$letter[1]
   filtered_df <- advanced_resampled_stats(beeps,node,freq)
   #filtered_df <- merge(filtered_df, noderssi, by="NodeId")
   filtered_df$weight <- filtered_df$beep_count
-  #filtered_df$weight <- ((filtered_df$max_rssi*-1)*filtered_df$beep_count)#/(filtered_df$V1*-1)
+  #filtered_df$weight <- filtered_df$beep_count/(filtered_df$max_rssi*-1)#(filtered_df$V1*-1)
   filtered_df$num_x <- filtered_df$node_x*filtered_df$weight
   filtered_df$num_y <- filtered_df$node_y*filtered_df$weight
   filtered_df <- filtered_df[order(filtered_df$TagId, filtered_df$RadioId, filtered_df$freq, -filtered_df$max_rssi),]
@@ -159,11 +163,42 @@ weighted_average <- function(beeps, node, freq, MAX_NODES=0) {
     filtered_df <- filtered_df[, head(.SD, MAX_NODES), by=c("TagId", "RadioId", "freq")]
   }
   outdf <- filtered_df %>% group_by(TagId, RadioId, freq) %>%
-    summarise(num_x = sum(num_x), num_y = sum(num_y), total=sum(weight), unique_nodex = length(unique(NodeId)), easting = mean(node_x), northing = mean(node_y)) #lat = mean(node_lat), lng = mean(node_lng), 
+    summarise(num_x = sum(num_x), num_y = sum(num_y), total=sum(weight), unique_nodes = length(unique(NodeId)), easting = mean(node_x), northing = mean(node_y)) #lat = mean(node_lat), lng = mean(node_lng), 
   outdf <- as.data.frame(outdf)
   outdf$avg_x <- outdf$num_x / outdf$total
   outdf$avg_y <- outdf$num_y / outdf$total
   #CALCULATE BACK TO LAT/LNG?
   outdf$zone <- zone
   outdf$letter <- letter
+  outdf$date <- format(outdf$freq, "%Y-%m-%d")
+  outdf$time_of_day <- format(outdf$freq, "%H:%M:%s")
+  outdf$hour <- as.integer(format(outdf$freq, "%H"))
+  outdf <- outdf[complete.cases(outdf),]
+  coordinates(outdf) <- ~avg_x+avg_y
+  crs(outdf) <- CRS(paste0("+proj=utm +zone=", zone, "+datum=WGS84")) 
+  outdf <- spTransform(outdf,CRS("+proj=longlat +datum=WGS84"))
   return(outdf)}
+
+export_locs <- function(y, beeps, node, outpath) {
+  lapply(y, function(x) {
+    locations <- weighted_average(x, beeps, node)
+    locations <- data.frame(x=coordinates(locations)[,1], y=coordinates(locations)[,2], locations@data)
+    write.csv(locations,paste(outpath,gsub(" ", "", paste("estimates_",x,".csv",sep=""), fixed = TRUE)))})
+}
+
+node_file <- function(health) {
+  if (nrow(health) < 1) stop("no node health data!")
+  health$timediff <- as.integer(health$Time - health$RecordedAt)
+  health <- health[health$timediff == 0,]
+  health <- aggregate(health[,c("Latitude", "Longitude")],list(health$NodeId), mean, na.rm=TRUE)
+  if (any(is.na(health))) {health <- health[-which(is.na(health$Latitude) | is.na(health$Latitude)),]}
+  #
+  colnames(health)[colnames(health)=="Latitude"] <- "lat"
+  colnames(health)[colnames(health)=="Longitude"] <- "lng"
+  colnames(health)[colnames(health)=="Group.1"] <- "NodeId"
+return(health)}
+
+export_node <- function(health, out_path) {
+  nodehealth <- node_file(health)
+  write.csv(nodehealth,file=paste0(outpath,"node_loc.csv"))
+}
