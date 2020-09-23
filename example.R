@@ -14,8 +14,8 @@ outpath <- "../plots/"
 freq <- "1 hour" #interval to summarize node health indicators of interest
 
 
-longitude <- -81.73625912
-latitude <- 27.59905438
+#longitude <- -81.73625912
+#latitude <- 27.59905438
 
 ## if you want tide-based viz on your graphs, un-comment the tide.R function line in the header of node_health.R & all needed packages
 #change tides to TRUE here
@@ -45,7 +45,7 @@ gps_data <- all_data[[3]]
 
 #put your beep files straight off the node each into a folder corresponding to the node ID
 #put all of these node ID folders into a folder, which is where "indir" should be pointed
-infile <- "../data/test/experiment/NodeCSV"
+infile <- "../data/Lauren/node"
 my_node_data <- load_node_data(infile)
 
 #UNCOMMENT AND RUN THE export_data() FUNCTION below IF YOU WANT OUTPUT CSV FILES
