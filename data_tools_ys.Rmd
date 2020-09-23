@@ -1,0 +1,59 @@
+---
+title: "Untitled"
+author: "Young"
+date: "9/23/2020"
+output: github_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Load libraries
+```{r echo = FALSE}
+library(raster)
+library(sp)
+library(rgdal)
+library(sf)
+source("functions/data_manager.R")
+source("functions/localization.R")
+```
+
+Infile and outpath
+```{r}
+infile <- "../allfiles" #all 3 file types I download from CTT (node health, beep, gps)
+outpath <- "../data_tools/test/"
+
+#tags <- read.csv(paste(infile,"DATA/nodes/Tags.csv",sep="/"), as.is=TRUE, na.strings=c("NA", "")) #uppercase node letters
+```
+
+interval to summarize node health indicators of interest
+```{r}
+freq <- "1 hour"
+
+#not sure what this means?
+longitude <- -81.73625912
+latitude <- 27.59905438
+```
+
+```{r}
+#EXAMPLE POSSIBLE VALUES
+#tags <- c("61526633")
+#start_time = as.POSIXct("2020-07-30 12:00:00", tz = "America/New_York")
+#end_time = as.POSIXct("2020-08-20 12:00:00", tz = "America/New_York")
+all_data <- load_data(infile) #starttime, tags, endtime=
+#set arguments if you choose to subset by date or tags
+
+beep_data <- all_data[[1]]
+beep_data <- beep_data[complete.cases(beep_data), ]
+tags <- read.csv("../data/DATA-20200911T200454Z-001/DATA/nodes/Tags.csv", as.is=TRUE, na.strings=c("NA", ""), header=TRUE, skipNul = TRUE, colClasses=c("TagId"="character"))
+beep_data <- beep_data[beep_data$TagId %in% tags$TagId,]
+health_data <- all_data[[2]]
+#health_data$timediff <- health_data$Time - health_data$RecordedAt
+gps_data <- all_data[[3]]
+
+```
+
+
+
+
+
+
