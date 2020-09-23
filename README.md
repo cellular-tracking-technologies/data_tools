@@ -3,8 +3,8 @@ Tools for managing, formatting, coalescing and exporting data from our products,
 
 How to use GitHub:
 
-1. Follow the instructions here if you do not have an account:  https://happygitwithr.com/github-acct.html  
-2. Work through chapters 6-12 of that link if you need to install git, and connect it all with RStudio.  
+1. Create an account: https://github.com
+2. Work through chapters 6-12 here if you need to install git, and connect it all with RStudio: https://happygitwithr.com/install-git.html
 3. Follow the instructions (at least through 5) here under "How to do this using RStudio and GitHub?" https://r-bio.github.io/intro-git-rstudio/  
   a. you don't need to enter the backticks in the shell  
   b. this example is a bit misleading because it doesn't include the .git, copy the link to the clipboard like before  
