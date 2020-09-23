@@ -292,7 +292,7 @@ load_node_data <- function(infile) {
   Sam3 <- lapply(files, function(x) {
     df <- tryCatch({
       if (file.size(x) > 0) {
-        read.csv(x,as.is=TRUE, na.strings=c("NA", ""), colClasses=c("id"="character"))
+        read.csv(x,as.is=TRUE, na.strings=c("NA", ""), colClasses=c("id"="character"), skipNul = TRUE)
       }}, error = function(err) {
         # error handler picks up where error was generated
         print("ignoring file", x, "- no data")
@@ -316,7 +316,7 @@ load_node_data <- function(infile) {
   nodes$RadioId <- 4 #https://bitbucket.org/cellulartrackingtechnologies/lifetag-system-report/src/master/beeps.py
   nodes$TagId <- nodes$id
   nodes$TagRSSI <- as.integer(nodes$rssi)
-  nodes$Validated <- NA
+  nodes$Validated <- 0
 return(nodes)}
 
 export_data <- function(infile, outpath, starttime=NULL, endtime=NULL, tags=NULL) {

@@ -20,7 +20,7 @@ beep_data <- all_data[[1]]
 ###looking for a file with the column names NodeId, lat, lng IN THAT ORDER
 nodes <- read.csv(paste(infile,"DATA/nodes/Nodes1.csv",sep="/"), as.is=TRUE, na.strings=c("NA", "")) #uppercase node letters
 
-beep_data <- beep_data[beep_data$NodeId %in% nodes$NodeId,] #c("326317", "326584", "3282fa", "3285ae", "3288f4")
+beep_data <- beep_data[beep_data$NodeId %in% toupper(nodes$NodeId),] #c("326317", "326584", "3282fa", "3285ae", "3288f4")
 
 ###UNCOMMENT THESE AND FILL WITH YOUR DESIRED VALUES IF YOU WANT YOUR OUTPUT AS ONLY A SUBSET OF THE DATA
 #channel <- a vector of RadioId value(s)
