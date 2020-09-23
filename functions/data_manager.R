@@ -137,7 +137,7 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
   len <- length(beep)
   if (len > 0) {
     print(paste("preparing",len,"beep files for merge from",directory_name,"using the regex", "^(?=.*data)(?!.*(node|log|gps))"))
-    beep_dataset <- df_merge(beep, cols=c("Time", "RadioId", "TagId", "NodeId"))
+    beep_dataset <- df_merge(beep, cols=c("Time", "RadioId", "TagId", "NodeId"), starttime = starttime, endtime = endtime)
     beep_data <- beep_dataset[[1]]
     version <- beep_dataset[[2]]
   } else print("no beep files found in directory")
@@ -149,7 +149,7 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
   len <- length(node)
   if (len > 0) {
     print(paste("preparing",len,"node health files for merge"))
-    health_dataset <- df_merge(node, cols=c("Time", "RadioId", "NodeId"))
+    health_dataset <- df_merge(node, cols=c("Time", "RadioId", "NodeId"), starttime = starttime, endtime = endtime)
     health_data <- health_dataset[[1]]
     version <- health_dataset[[2]]
   } else {
@@ -162,7 +162,7 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
   len <- length(gps)
   if (len > 0) {
     print(paste("preparing",len,"gps files for merge"))
-    gps_dataset <- df_merge(gps,z=version)
+    gps_dataset <- df_merge(gps,z=version, starttime = starttime, endtime = endtime)
     gps_data <- gps_dataset[[1]]
   } else { 
     print("no gps files found in directory")

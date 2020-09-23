@@ -8,7 +8,7 @@ source("functions/node_health.R")
 #This points to a directory that ONLY has your downloaded data from the sensor station.
 #It can contain any/all of your downloaded data files, just don't manipulate/add your own unrelated/altered files.
 #Unzip any zipped directories therein, but compressed csv files (csv.gz) don't need to be unzipped
-infile <- "../data/archbold/aug-sept20"
+infile <- "../data/Lauren/owl-dataset"
 outpath <- "../plots/"
 
 freq <- "1 hour" #interval to summarize node health indicators of interest
@@ -29,16 +29,21 @@ tides = FALSE
 
 #EXAMPLE POSSIBLE VALUES
 #tags <- c("61526633")
-#start_time = as.POSIXct("2020-07-30 12:00:00", tz = "America/New_York")
-#end_time = as.POSIXct("2020-08-20 12:00:00", tz = "America/New_York")
-all_data <- load_data(infile) #starttime, tags, endtime=
+#start_time = as.POSIXct("2020-08-18 01:00:00", tz = "America/New_York")
+#end_time = as.POSIXct("2020-09-17 23:00:00", tz = "America/New_York")
+
+start_time = as.POSIXct("2020-08-18 01:00:00", tz = "America/New_York")
+end_time = as.POSIXct("2020-09-17 23:00:00", tz = "America/New_York")
+
+all_data <- load_data(infile, start_time, end_time) #starttime, tags, endtime=
 #set arguments if you choose to subset by date or tags
 ####################################################################################
 
 beep_data <- all_data[[1]]
 beep_data <- beep_data[complete.cases(beep_data), ]
-tags <- read.csv("../data/DATA-20200911T200454Z-001/DATA/nodes/Tags.csv", as.is=TRUE, na.strings=c("NA", ""), header=TRUE, skipNul = TRUE, colClasses=c("TagId"="character"))
-beep_data <- beep_data[beep_data$TagId %in% tags$TagId,]
+#tags <- read.csv("../data/DATA-20200911T200454Z-001/DATA/nodes/Tags.csv", as.is=TRUE, na.strings=c("NA", ""), header=TRUE, skipNul = TRUE, colClasses=c("TagId"="character"))
+#beep_data <- beep_data[beep_data$TagId %in% tags$TagId,]
+
 health_data <- all_data[[2]]
 #health_data$timediff <- health_data$Time - health_data$RecordedAt
 gps_data <- all_data[[3]]
@@ -47,6 +52,8 @@ gps_data <- all_data[[3]]
 #put all of these node ID folders into a folder, which is where "indir" should be pointed
 infile <- "../data/Lauren/node"
 my_node_data <- load_node_data(infile)
+my_node_data <- my_node_data[my_node_data$Time > start_time & my_node_data$Time < end_time,]
+beep_data <- beep_data[beep_data$NodeId %in% my_node_data$NodeId,]
 
 #UNCOMMENT AND RUN THE export_data() FUNCTION below IF YOU WANT OUTPUT CSV FILES
 #export_data(infile, outpath, starttime=NULL, endtime=NULL, tags=NULL)
