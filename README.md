@@ -10,7 +10,7 @@ https://happygitwithr.com/github-acct.html
   b. this example is a bit misleading because it doesn't include the .git, copy the link to the clipboard like before  
   c. RESTART RSTUDIO BEFORE MOVING ONTO STEP 6 IN THIS TUTORIAL  
 3. "example.R" shows you example implementations of the functions (also read comments, functions that produce files are commented out)  
-4. If you want to pull updates from here to your copy, see chapter 31: https://happygitwithr.com/upstream-changes.html#push-these-changes-to-originmaster
+4. If you want to pull updates from here to your copy, see chapter 31: https://happygitwithr.com/upstream-changes.html#pull-changes-from-upstream
 
 Ideas for R package functions:  
 load_data()  
