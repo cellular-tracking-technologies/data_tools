@@ -140,7 +140,9 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
     beep_dataset <- df_merge(beep, cols=c("Time", "RadioId", "TagId", "NodeId"), starttime = starttime, endtime = endtime)
     beep_data <- beep_dataset[[1]]
     version <- beep_dataset[[2]]
-  } else print("no beep files found in directory")
+  } else {
+    print("no beep files found in directory")
+    beep_data <- data.frame()}
   #beep_data$RadioId <- as.integer(beep_data$RadioId)
 
 #what this does differently here is also checks for and removes records with NA times or times that don't fit the format
