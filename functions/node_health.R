@@ -268,7 +268,6 @@ node_plots <- function(health, nodes, freq) {
   plotting$NodeId <- sapply(strsplit(plotting$ID, "_"), "[[", 2)
   
   plots <- lapply(nodes, function(park) {
-    print(park)
   #ea <- plot_data[plot_data$RadioId == "2" & plot_data$NodeId == "496",]
   #ea <- plot_data[plot_data$NodeId == "496",]
     plot_data <- health[health$NodeId==park,]
@@ -368,6 +367,7 @@ export_node_channel_plots <- function(health_data,freq="1 hour",out_path=getwd()
 
   for (i in 1:length(filenames)) {
     file_name = paste(out_path,"node_",filenames[i],".png", sep="")
+    print(file_name)
     png(file_name, width=1800, height=1000)
     
     gA <- ggplotGrob(outplot[[i]][[x]])
@@ -387,11 +387,12 @@ export_node_channel_plots <- function(health_data,freq="1 hour",out_path=getwd()
   }}
 
 #ONLY FOR V2 STATIONS
-export_node_plots <- function(health_data,out_path=getwd(), x=6, y=5, z=3) {
+export_node_plots <- function(health_data,freq,out_path=getwd(), x=6, y=5, z=3) {
   nodes <- unique(health_data$NodeId)
-  outplot <- node_plots(health_data, nodes)
+  outplot <- node_plots(health_data, nodes, freq)
   for (i in 1:length(nodes)) {
     file_name = paste(out_path,"node_",nodes[i],".png", sep="")
+    print(file_name)
     png(file_name, width=1800, height=1000)
       
     gA <- ggplotGrob(outplot[[i]][[x]])

@@ -154,6 +154,8 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
     health_dataset <- df_merge(node, cols=c("Time", "RadioId", "NodeId"), starttime = starttime, endtime = endtime)
     health_data <- health_dataset[[1]]
     version <- health_dataset[[2]]
+    check <- as.data.table(health_data)[,.N,by=NodeId]
+    health_data <- health_data[!health_data$NodeId %in% check[check$N==1,]$NodeId,]
   } else {
     print("no node health files found in directory")
     health_data <- data.frame()}
