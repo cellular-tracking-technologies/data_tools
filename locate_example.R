@@ -3,6 +3,8 @@ library(raster)
 library(sp)
 library(rgdal)
 library(sf)
+library(ggplot2)
+library(geosphere)
 source("functions/data_manager.R")
 source("functions/localization.R")
 
@@ -44,6 +46,19 @@ p3 = ggplot(data=resampled, aes(x=freq, y=max_rssi, group=NodeId, colour=NodeId)
 locations <- weighted_average(freq[1], beep_data, nodes)
 #multi_freq <- lapply(freq, weighted_average, beeps=beep_data, node=nodes) 
 #export_locs(freq, beep_data, nodes, outpath)
+
+locations$ID <- paste(locations$TagId, locations$freq, sep="_")
+locations <- locations[!duplicated(locations$ID),]
+locations <- cbind(locations, locations@coords)
+
+time <- "1 day"
+move <- as.data.table(locations)[, .(Lat = mean(avg_y), Lon = mean(avg_x), std_lat = sd(avg_y), std_lon = sd(avg_x), .N), by = .(cut(freq, time),TagId)] #V = mean(SolarVolts), , 
+move$lowlat <- move$Lat - move$std_lat
+move$uplat <- move$Lat + move$std_lat
+move$lowlon <- move$Lon - move$std_lon
+move$uplon <- move$Lon + move$std_lon
+move$d <- distVincentyEllipsoid(cbind(move$lowlon, move$lowlat), cbind(move$uplon, move$uplat))
+move$d <- (move$d)/1000
 
 nodes_spatial <- nodes
 coordinates(nodes_spatial) <- 3:2

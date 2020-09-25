@@ -167,6 +167,9 @@ weighted_average <- function(freq, beeps, node, MAX_NODES=0) {
   outdf <- as.data.frame(outdf)
   outdf$avg_x <- outdf$num_x / outdf$total
   outdf$avg_y <- outdf$num_y / outdf$total
+  
+  outdf$avex <- outdf$avg_x
+  outdf$avey <- outdf$avg_y
   #CALCULATE BACK TO LAT/LNG?
   outdf$zone <- zone
   outdf$letter <- letter
