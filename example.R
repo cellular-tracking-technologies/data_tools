@@ -8,7 +8,8 @@ source("functions/node_health.R")
 #This points to a directory that ONLY has your downloaded data from the sensor station.
 #It can contain any/all of your downloaded data files, just don't manipulate/add your own unrelated/altered files.
 #Unzip any zipped directories therein, but compressed csv files (csv.gz) don't need to be unzipped
-infile <- "../data/Lauren/owl-dataset"
+
+infile <- "../data/archbold/aug-sept20"
 outpath <- "../plots/"
 
 freq <- "1 hour" #interval to summarize node health indicators of interest
@@ -33,16 +34,14 @@ tides = FALSE
 #end_time = as.POSIXct("2020-09-17 23:00:00", tz = "America/New_York")
 
 start_time = as.POSIXct("2020-08-18 01:00:00", tz = "America/New_York")
-end_time = as.POSIXct("2020-09-17 23:00:00", tz = "America/New_York")
+end_time = as.POSIXct("2020-09-10 15:00:00", tz = "America/New_York")
 
-all_data <- load_data(infile, start_time, end_time) #starttime, tags, endtime=
+all_data <- load_data(infile) #start_time, end_time tags
 #set arguments if you choose to subset by date or tags
 ####################################################################################
 
 beep_data <- all_data[[1]]
-beep_data <- beep_data[complete.cases(beep_data), ]
-#tags <- read.csv("../data/DATA-20200911T200454Z-001/DATA/nodes/Tags.csv", as.is=TRUE, na.strings=c("NA", ""), header=TRUE, skipNul = TRUE, colClasses=c("TagId"="character"))
-#beep_data <- beep_data[beep_data$TagId %in% tags$TagId,]
+#beep_data <- beep_data[complete.cases(beep_data), ]
 
 health_data <- all_data[[2]]
 #health_data$timediff <- health_data$Time - health_data$RecordedAt
@@ -50,10 +49,14 @@ gps_data <- all_data[[3]]
 
 #put your beep files straight off the node each into a folder corresponding to the node ID
 #put all of these node ID folders into a folder, which is where "indir" should be pointed
-infile <- "../data/Lauren/node"
+infile <- "../data/from_node"
 my_node_data <- load_node_data(infile)
-my_node_data <- my_node_data[my_node_data$Time > start_time & my_node_data$Time < end_time,]
-beep_data <- beep_data[beep_data$NodeId %in% my_node_data$NodeId,]
+my_node_data <- my_node_data[my_node_data$Time > as.POSIXct("2020-08-18 16:41:00", tz="UTC") & my_node_data$Time < as.POSIXct("2020-09-09 17:59:00", tz="UTC"),]
+
+tags <- read.csv("../data/Lauren/Deployed Tags.csv", as.is=TRUE, na.strings=c("NA", ""), header=TRUE, skipNul = TRUE, colClasses=c("TagId"="character"))
+beep_data <- beep_data[beep_data$TagId %in% tags$TagId,]
+
+my_node_data <- my_node_data[my_node_data$TagId %in% my_node_data$TagId,]
 
 #UNCOMMENT AND RUN THE export_data() FUNCTION below IF YOU WANT OUTPUT CSV FILES
 #export_data(infile, outpath, starttime=NULL, endtime=NULL, tags=NULL)
@@ -64,7 +67,9 @@ beep_data <- beep_data[beep_data$NodeId %in% my_node_data$NodeId,]
 #this creates a unique ID for each combo of radio + node, summarizes node health variables for the input time interval and each unique combo of node x radio, and then...
 #...expands the data frame to NA fill for missing time x ID combos based on your time interval chosen
 plotting_data <- summarize_health_data(health_data, freq)
-ids <- unique(plotting_data[[1]]$ID)
+summarized <- plotting_data[[1]]
+
+ids <- unique(summarized$ID)
 
 #this creates a nested list of diagnostic plots for each combo of node and radio ID. You can index the list by the vector of node x ID combos passed to it
 radionode_plots <- node_channel_plots(health_data, freq)
@@ -79,7 +84,7 @@ radionode_plots <- node_channel_plots(health_data, freq)
 ## if you want to write out plot images...
 #call the function "export_node_channel_plots(health,outpath,x,y,z)" replacing x, y, z with the integer index of the plot desired for each of the 3 panels
 #the resulting plots will be in "outpath" named "node_<RadioId>_<NodeId>.png"
-export_node_channel_plots(health_data,freq,outpath,3,2,1)
+export_node_channel_plots(health_data,freq,outpath,4,2,1)
 
 ###FOR V2 STATIONS ONLY
 nodes <- unique(health_data$NodeId)
@@ -95,4 +100,4 @@ nodes <- unique(health_data$NodeId)
 
 #call the export_node_plots() function to output the plots looking for time stamp mismatches
 #the resulting plots will be in "outpath" named "nodes_<node>.png"
-#export_node_plots(health_data,outpath)
+export_node_plots(health_data,outpath, freq)
