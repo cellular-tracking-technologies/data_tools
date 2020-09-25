@@ -44,19 +44,18 @@ beep_data <- all_data[[1]]
 #beep_data <- beep_data[complete.cases(beep_data), ]
 
 health_data <- all_data[[2]]
-#health_data$timediff <- health_data$Time - health_data$RecordedAt
+#health_data$timediff <- health_data$Time - health_data$RecordedAtehy
 gps_data <- all_data[[3]]
 
 #put your beep files straight off the node each into a folder corresponding to the node ID
 #put all of these node ID folders into a folder, which is where "indir" should be pointed
-infile <- "../data/from_node"
-my_node_data <- load_node_data(infile)
-my_node_data <- my_node_data[my_node_data$Time > as.POSIXct("2020-08-18 16:41:00", tz="UTC") & my_node_data$Time < as.POSIXct("2020-09-09 17:59:00", tz="UTC"),]
+#infile <- "../data/from_node"
+#my_node_data <- load_node_data(infile)
+#my_node_data <- my_node_data[my_node_data$Time > as.POSIXct("2020-08-18 16:41:00", tz="UTC") & my_node_data$Time < as.POSIXct("2020-09-09 17:59:00", tz="UTC"),]
 
-tags <- read.csv("../data/Lauren/Deployed Tags.csv", as.is=TRUE, na.strings=c("NA", ""), header=TRUE, skipNul = TRUE, colClasses=c("TagId"="character"))
-beep_data <- beep_data[beep_data$TagId %in% tags$TagId,]
-
-my_node_data <- my_node_data[my_node_data$TagId %in% my_node_data$TagId,]
+#tags <- read.csv("../data/Deployed Tags.csv", as.is=TRUE, na.strings=c("NA", ""), header=TRUE, skipNul = TRUE, colClasses=c("TagId"="character"))
+#beep_data <- beep_data[beep_data$TagId %in% tags$TagId,]
+#my_node_data <- my_node_data[my_node_data$TagId %in% my_node_data$TagId,]
 
 #UNCOMMENT AND RUN THE export_data() FUNCTION below IF YOU WANT OUTPUT CSV FILES
 #export_data(infile, outpath, starttime=NULL, endtime=NULL, tags=NULL)
