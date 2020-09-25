@@ -387,7 +387,7 @@ export_node_channel_plots <- function(health_data,freq="1 hour",out_path=getwd()
   }}
 
 #ONLY FOR V2 STATIONS
-export_node_plots <- function(health_data,out_path=getwd(), x=4, y=5, z=3) {
+export_node_plots <- function(health_data,out_path=getwd(), x=6, y=5, z=3) {
   nodes <- unique(health_data$NodeId)
   outplot <- node_plots(health_data, nodes)
   for (i in 1:length(nodes)) {
