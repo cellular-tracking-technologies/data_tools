@@ -124,14 +124,24 @@ node_channel_plots <- function(health, freq) { #freq,
     ea$rssi <- scale(ea$RSSI)
     threshold <- ea$rssi[nrow(ea),]
     ea <- ea[-nrow(ea),]
+    ea <- ea[order(ea$cut),]
     batt <- data.frame(x1 = head(ea$Time, -1), x2 = tail(ea$Time, -1), y1 = head(ea$batt, -1), y2 = tail(ea$batt, -1),
                        col = head(ea$col, -1))
     
-    health_node <- health_df[health_df$ID==park,]
+    #battery
+    p = ggplot() + theme_bw() +
+      #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
+      geom_segment(aes(x = x1, y = y1, xend = x2, yend = y2, colour=col), data=batt) + #size=2
+      scale_color_manual(values = c("(0,3.7]" = "#FF0000","(3.7,4]" = "#F5B041","(4,Inf]" = "#00FF00")) +
+      scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(plot_data$Time), max(plot_data$Time))) +
+      theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), legend.position = "none", axis.text=element_text(size=10),
+            axis.title=element_text(size=30,face="bold")) +
+      scale_y_continuous(name="Batt", limits=c(2,5))
+
 #RSSI scatter plot, A&V lines commented out    
     p1 = ggplot() + theme_bw() +
       #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
-      theme(axis.text=element_text(size=20),
+      theme(axis.text=element_text(size=10),
                           axis.title=element_text(size=30,face="bold")) +
     #scaled: geom_point(data = ea, aes(x = Time, y = rssi, group=1)) +
       geom_point(data = ea, aes(x = Time, y = RSSI, group=1)) +
@@ -141,26 +151,18 @@ node_channel_plots <- function(health, freq) { #freq,
     #geom_line(data = ea, aes(x = Time, y = scale(A), group=1), colour="orange") +
       scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(plot_data$Time), max(plot_data$Time)))
   #+ scale_y_continuous(name="Count", limits=c(-110,-45))
-
-#battery
-    p = ggplot() + theme_bw() +
-      #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
-        geom_segment(aes(x = x1, y = y1, xend = x2, yend = y2, colour=col), data=batt) + #size=2
-        scale_color_manual(values = c("(0,3.7]" = "#FF0000","(3.7,4]" = "#F5B041","(4,Inf]" = "#00FF00")) +
-        scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(plot_data$Time), max(plot_data$Time))) +
-        theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), legend.position = "none", axis.text=element_text(size=20),
-              axis.title=element_text(size=30,face="bold")) +
-        scale_y_continuous(name="Batt", limits=c(2,5))
-    ea <- ea[order(ea$cut),]
+    
+    health_node <- health_df[health_df$ID==park,]
     boxp2 <- ggplot() + 
       #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
       geom_boxplot(data=health_node, aes(timebin, NodeRSSI, group=time))# + facet_wrap(~ID, scale="free")
+    
 #number of check-ins
     p2 = ggplot(data = ea, aes(x = Time, y = N, group=1)) + theme_bw() +
       #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
       geom_bar(stat="identity") +
       scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(health_data$Time), max(health_data$Time))) +
-      theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=20),
+      theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=10),
             axis.title=element_text(size=30,face="bold")) +
       scale_y_continuous(name="Count", limits=c(0,12))
 
@@ -171,10 +173,10 @@ node_channel_plots <- function(health, freq) { #freq,
       geom_point(data = ea, aes(x = Time, y = rssi, group=1)) +
       geom_line(data = ea, aes(x = Time, y = scale(N), group=1), colour="purple") +
       scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(health_data$Time), max(health_data$Time))) +
-      theme(axis.text=element_text(size=20),
+      theme(axis.text=element_text(size=10),
             axis.title=element_text(size=30,face="bold"))
   
-  return(list(p1,p,p2,p3))})
+  return(list(p,p1,p2,p3, boxp2))})
 return(outplots)}
 
 #summary_v2 <- function(x) {
@@ -203,18 +205,6 @@ v2_plots <- function(health, freq) {
     threshold <- ea$rssi[nrow(ea),]
     ea <- ea[-nrow(ea),]
     
-    #RSSI scatter plot, A&V lines commented out    
-    p1 = ggplot() + theme_bw() +
-      geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
-      #scaled: geom_point(data = ea, aes(x = Time, y = rssi, group=1)) +
-      geom_point(data = ea, aes(x = Time, y = RSSI, group=1)) +
-      #scaled: geom_hline(yintercept = threshold) +
-      geom_hline(yintercept = -95) +
-      #geom_line(data = ea, aes(x = Time, y = scale(V), group=1), colour="red") +
-      #geom_line(data = ea, aes(x = Time, y = scale(A), group=1), colour="orange") +
-      scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(plot_data$Time), max(plot_data$Time)))
-    #+ scale_y_continuous(name="Count", limits=c(-110,-45))
-    
     p = ggplot() + theme_bw() +
       geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
       #scaled: geom_point(data = ea, aes(x = Time, y = rssi, group=1)) +
@@ -225,7 +215,7 @@ v2_plots <- function(health, freq) {
       scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(health_df$Time), max(health_df$Time)))
     #+ scale_y_continuous(name="Count", limits=c(-110,-45))
     
-    p2 = ggplot() + theme_bw() +
+    p1 = ggplot() + theme_bw() +
       geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
       #scaled: geom_point(data = ea, aes(x = Time, y = rssi, group=1)) +
       geom_line(data = ea, aes(x = Time, y = Lon, group=1)) +
@@ -233,6 +223,18 @@ v2_plots <- function(health, freq) {
       #geom_line(data = ea, aes(x = Time, y = scale(V), group=1), colour="red") +
       #geom_line(data = ea, aes(x = Time, y = scale(A), group=1), colour="orange") +
       scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(health_df$Time), max(health_df$Time)))
+    
+    #RSSI scatter plot, A&V lines commented out    
+    p2 = ggplot() + theme_bw() +
+      geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
+      #scaled: geom_point(data = ea, aes(x = Time, y = rssi, group=1)) +
+      geom_point(data = ea, aes(x = Time, y = RSSI, group=1)) +
+      #scaled: geom_hline(yintercept = threshold) +
+      geom_hline(yintercept = -95) +
+      #geom_line(data = ea, aes(x = Time, y = scale(V), group=1), colour="red") +
+      #geom_line(data = ea, aes(x = Time, y = scale(A), group=1), colour="orange") +
+      scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(plot_data$Time), max(plot_data$Time)))
+    #+ scale_y_continuous(name="Count", limits=c(-110,-45))
     
     p3 = ggplot() + theme_bw() +
       geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
@@ -244,7 +246,7 @@ v2_plots <- function(health, freq) {
       #scale_y_continuous(limits=c())
       scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(health_df$Time), max(health_df$Time)))
     
-  return(list(p1, boxp, p, p2, p3))})
+  return(list(p, p1, p2, p3))})
 return(outplots)}
 
 #ONLY FOR V2 STATIONS
@@ -275,7 +277,7 @@ node_plots <- function(health, nodes, freq) {
     
     p = ggplot() + theme_bw() +
       #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
-      theme(axis.text=element_text(size=20),
+      theme(axis.text=element_text(size=15),
             axis.title=element_text(size=30,face="bold")) +
       #scaled: geom_point(data = ea, aes(x = Time, y = rssi, group=1)) +
       geom_point(data = plotter, aes(x = Time, y = RSSI, group=RadioId, colour=RadioId)) +
@@ -289,7 +291,7 @@ node_plots <- function(health, nodes, freq) {
       #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
       geom_bar(stat="identity", position=position_dodge()) +
       scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(health$Time), max(health$Time))) +
-      theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=20),
+      theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=15),
             axis.title=element_text(size=30,face="bold")) +
       scale_y_continuous(name="Count", limits=c(0,12))
     
@@ -302,7 +304,7 @@ node_plots <- function(health, nodes, freq) {
       #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
       geom_bar(stat="identity") +
       scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(health$Time), max(health$Time))) +
-      theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=20),
+      theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=15),
             axis.title=element_text(size=30,face="bold")) +
       scale_y_continuous(name="Count", limits=c(0,12))
 
@@ -312,7 +314,7 @@ node_plots <- function(health, nodes, freq) {
       geom_segment(aes(x = x1, y = y1, xend = x2, yend = y2, colour=col), data=batt) + #size=2
       scale_color_manual(values = c("(0,3.7]" = "#FF0000","(3.7,4]" = "#F5B041","(4,Inf]" = "#00FF00")) +
       scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(health$Time), max(health$Time))) +
-      theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=20), #legend.position = "none", 
+      theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=15), #legend.position = "none", 
             axis.title=element_text(size=30,face="bold")) +
       scale_y_continuous(name="Batt", limits=c(2,5))
     
@@ -328,7 +330,7 @@ node_plots <- function(health, nodes, freq) {
     
     ea2 <- plot_data[plot_data$match > 0,]
     p1 = ggplot() + theme_bw() +
-      theme(axis.text=element_text(size=20),axis.title=element_text(size=30)) +
+      theme(axis.text=element_text(size=15),axis.title=element_text(size=30)) +
       geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=Inf, ymax=biggest-Inf),fill='light grey') +
       #geom_point(data = ea2, aes(x = Time, y = scaled, group=1)) + 
       geom_point(data = plot_data, aes(x = Time, y = scaled, group=1, colour=is.na(RecordedAt))) + 
@@ -343,17 +345,18 @@ node_plots <- function(health, nodes, freq) {
       scale_x_datetime(date_breaks="1 week", date_labels="%b %d") + #, limits=c(min(plot_data$Time),max(plot_data$Time)
       scale_y_continuous(name="Mismatch") #limits=c(0,60)
     
-  return(list(p1, p2, p, p4, p3, p5))})
+  return(list(p1, p4, p3, p1, p2, p5))})
 return(plots)}
 
 #gps <- read.csv("~/Downloads/89460800120046859680.csv")
 
-gps_plots <- function(gps) {
-  p1 <- ggplot(data = gps, mapping = aes(x = cut, y = Alt, group = 1)) +
+gps_plots <- function(gps, freq) {
+  gps_data <- gps_data_summary(gps, freq)
+  p1 <- ggplot(data = gps_data, mapping = aes(x = cut, y = Alt, group = 1)) +
     geom_line() +
     geom_area()
   
-  aql <- melt(gps, id.vars = c("cut", "Alt"))
+  aql <- melt(gps_data, id.vars = c("cut", "Alt"))
   
   p2 <- ggplot(data=aql, aes(x=cut, y=value, fill=variable)) +
     geom_bar(stat="identity")

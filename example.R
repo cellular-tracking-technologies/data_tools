@@ -1,5 +1,22 @@
-#This is an example R script for working with your CTT data! click the data_tools.RProj file in this folder, and your working directory will be set to that folder.
-
+## ---------------------------
+##
+## Script name: example.R
+##
+## Purpose of script: This is an example R script for working with your CTT data! click the data_tools.RProj file in this folder, and your working directory will be set
+## to that folder. produce diagnostics visualizations
+##
+## Author: Dr. Jessica Gorzo
+##
+## Date Created: 2020-07-13
+##
+## Email: jessica.gorzo@celltracktech.com
+##
+## ---------------------------
+##
+## Notes: 
+##
+## ---------------------------
+## load up the packages we will need:  (un-comment as required)
 ## load up our functions into memory
 source("functions/data_manager.R")
 source("functions/node_health.R")
@@ -10,13 +27,11 @@ source("functions/node_health.R")
 #Unzip any zipped directories therein, but compressed csv files (csv.gz) don't need to be unzipped
 
 infile <- "../data/archbold/aug-sept20"
+
+#This is where you want your output to go
 outpath <- "../plots/"
 
 freq <- "1 hour" #interval to summarize node health indicators of interest
-
-
-#longitude <- -81.73625912
-#latitude <- 27.59905438
 
 ## if you want tide-based viz on your graphs, un-comment the tide.R function line in the header of node_health.R & all needed packages
 #change tides to TRUE here
@@ -30,13 +45,10 @@ tides = FALSE
 
 #EXAMPLE POSSIBLE VALUES
 #tags <- c("61526633")
-#start_time = as.POSIXct("2020-08-18 01:00:00", tz = "America/New_York")
-#end_time = as.POSIXct("2020-09-17 23:00:00", tz = "America/New_York")
-
 start_time = as.POSIXct("2020-08-18 01:00:00", tz = "America/New_York")
 end_time = as.POSIXct("2020-09-10 15:00:00", tz = "America/New_York")
 
-all_data <- load_data(infile) #start_time, end_time tags
+all_data <- load_data(infile) #start_time, end_time, tags
 #set arguments if you choose to subset by date or tags
 ####################################################################################
 
@@ -44,13 +56,14 @@ beep_data <- all_data[[1]]
 #beep_data <- beep_data[complete.cases(beep_data), ]
 
 health_data <- all_data[[2]]
-#health_data$timediff <- health_data$Time - health_data$RecordedAtehy
+#health_data now has a data frame of all of your node health files. 
+
 gps_data <- all_data[[3]]
 
 #put your beep files straight off the node each into a folder corresponding to the node ID
 #put all of these node ID folders into a folder, which is where "indir" should be pointed
-#infile <- "../data/from_node"
-#my_node_data <- load_node_data(infile)
+#indir <- "../data/from_node"
+#my_node_data <- load_node_data(indir)
 #my_node_data <- my_node_data[my_node_data$Time > as.POSIXct("2020-08-18 16:41:00", tz="UTC") & my_node_data$Time < as.POSIXct("2020-09-09 17:59:00", tz="UTC"),]
 
 #tags <- read.csv("../data/Deployed Tags.csv", as.is=TRUE, na.strings=c("NA", ""), header=TRUE, skipNul = TRUE, colClasses=c("TagId"="character"))
@@ -60,7 +73,7 @@ gps_data <- all_data[[3]]
 #UNCOMMENT AND RUN THE export_data() FUNCTION below IF YOU WANT OUTPUT CSV FILES
 #export_data(infile, outpath, starttime=NULL, endtime=NULL, tags=NULL)
 
-#health_data now has a data frame of all of your node health files. Alternatively, if you have a file already created that you'd like to work
+#Alternatively, if you have a file already created that you'd like to work
 #with in the same format, you can always read.csv() into a data frame of the same name here
 
 #this creates a unique ID for each combo of radio + node, summarizes node health variables for the input time interval and each unique combo of node x radio, and then...
