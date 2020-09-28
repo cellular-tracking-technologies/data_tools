@@ -85,6 +85,8 @@ x: the plot for the 1st panel
 y: the plot for the 2nd panel  
 z: the plot for the 3rd panel  
 
+To assign x, y and z, look at the description for node_channel_plots() and select those plot indices in the order you want them on the page.  
+
 #### export_node_plots(health_data, freq, out_path, x, y, z)
 NOTE: THIS ONLY WORKS FOR V2  
 same as above; indices for the plots can be chosen from the list under the node_plots() description  
