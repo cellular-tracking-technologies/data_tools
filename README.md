@@ -80,6 +80,8 @@ z: the plot for the 3rd panel
 #### export_node_plots(health_data, freq, out_path, x, y, z)
 same as above; indices for the plots can be chosen from the list under the node_plots() description  
 
+## Example Scripts
+
 "example.R" shows you example implementations of the data management and node health functions (also read comments, functions that produce files are commented out)   
 "locate_example.R" is a template script for running the location functions
 
