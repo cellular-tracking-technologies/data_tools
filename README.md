@@ -33,7 +33,7 @@ The input folder can contain any melange of raw downloaded files from the sensor
 #### node_channel_plots(health, freq)
 This function is the "engine" behind the export function. You can run it standalone with the following parameters, but you don't have to.  
 
-health: the 2nd dataframe output by the load_data() function 
+health: the 2nd dataframe output by the load_data() function  
 freq: the time interval for which you want variables to be summarized  
 
 1. battery  
@@ -43,7 +43,7 @@ freq: the time interval for which you want variables to be summarized
 5. box plot of node RSSI
 
 #### v2_plots(health, freq)
-health: the 2nd dataframe output by the load_data() function  
+health: the 2nd dataframe output by the load_data() function    
 freq: the time interval for which you want variables to be summarized  
 
 1. latitude  
