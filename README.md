@@ -74,7 +74,7 @@ health_data: the 2nd dataframe output by the load_data() function
 freq: the time interval for which you want variables to be summarized  
 out_path: where you want your plots to go  
 x: the plot for the 1st panel  
-y: the plot for the 2nd panel
+y: the plot for the 2nd panel  
 z: the plot for the 3rd panel  
 
 #### export_node_plots(health_data, freq, out_path, x, y, z)
