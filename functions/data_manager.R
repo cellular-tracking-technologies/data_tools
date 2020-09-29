@@ -330,7 +330,7 @@ export_data <- function(infile, outpath, starttime=NULL, endtime=NULL, tags=NULL
   gps_data <- all_data[[3]]
   now <- Sys.time()
   attr(now, "tzone") <- "UTC"
-if (exists("beep_data")) write.csv(beep_data, file = paste(outpath,"stationbeep_",strptime(now,format='%Y-%m-%d_%H%M%S'),".csv"), row.names = FALSE)
-if (exists("health_data")) write.csv(health_data, file = paste(outpath,"stationhealth_",strptime(now,format='%Y-%m-%d_%H%M%S'),".csv"), row.names = FALSE)
-if (exists("gps_data")) write.csv(gps_data, file = paste(outpath,"stationgps_",strptime(now,format='%Y-%m-%d_%H%M%S'),".csv"), row.names = FALSE)
+if (exists("beep_data")) write.csv(beep_data, file = paste(outpath,"stationbeep_",strftime(now,format='%Y-%m-%d_%H%M%S'),".csv"), row.names = FALSE)
+if (exists("health_data")) write.csv(health_data, file = paste(outpath,"stationhealth_",strftime(now,format='%Y-%m-%d_%H%M%S'),".csv"), row.names = FALSE)
+if (exists("gps_data")) write.csv(gps_data, file = paste(outpath,"stationgps_",strftime(now,format='%Y-%m-%d_%H%M%S'),".csv"), row.names = FALSE)
 }

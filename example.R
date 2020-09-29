@@ -71,7 +71,7 @@ gps_data <- all_data[[3]]
 #my_node_data <- my_node_data[my_node_data$TagId %in% my_node_data$TagId,]
 
 #UNCOMMENT AND RUN THE export_data() FUNCTION below IF YOU WANT OUTPUT CSV FILES
-#export_data(infile, outpath, starttime=NULL, endtime=NULL, tags=NULL)
+export_data(infile, outpath, starttime=NULL, endtime=NULL, tags=NULL)
 
 #Alternatively, if you have a file already created that you'd like to work
 #with in the same format, you can always read.csv() into a data frame of the same name here
