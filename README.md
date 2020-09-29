@@ -14,7 +14,7 @@ A RStudio tutorial is beyond the scope of this readme, but if you need to get st
 
 # How to use These Tools
 
-There is a subfolder named "functions" which is full of, well, scripts that contain functions! You'll notice they're often called (via source()) at the top of the example scripts. This loads in the custom functions that I have written to handle CTT data. Ultimately, these will be rolled into an R package.
+There is a subfolder within this repo named "functions" which is full of, well, scripts that contain functions! You'll notice they're often called (via source()) at the top of the example scripts. This loads in the custom functions that I have written to handle CTT data. Ultimately, these will be rolled into an R package.
 
 ## Functions
 
@@ -36,6 +36,8 @@ This function is the "engine" behind the export function. You can run it standal
 health: the 2nd dataframe output by the load_data() function  
 freq: the time interval for which you want variables to be summarized  
 
+The output is a nested list for each combination of channel and node, with the following plots for each:  
+
 1. battery  
 2. RSSI  
 3. number of check-ins  
@@ -46,15 +48,21 @@ freq: the time interval for which you want variables to be summarized
 health: the 2nd dataframe output by the load_data() function    
 freq: the time interval for which you want variables to be summarized  
 
+The output is a nested list for each combination of channel and node, with the following plots for each:  
+
 1. latitude  
 2. longitude  
 3. RSSI  
 4. dispersion  
 
 #### node_plots(health, nodes, freq)
+NOTE: THIS ONLY WORKS FOR V2  
+
 health: the 2nd dataframe output by the load_data() function  
 nodes: list of nodes  
 freq: the time interval for which you want variables to be summarized  
+
+The output is a nested list for each node, with the following plots for each:  
 
 1. RSSI  
 2. number of check-ins  
@@ -77,7 +85,10 @@ x: the plot for the 1st panel
 y: the plot for the 2nd panel  
 z: the plot for the 3rd panel  
 
+To assign x, y and z, look at the description for node_channel_plots() and select those plot indices in the order you want them on the page.  
+
 #### export_node_plots(health_data, freq, out_path, x, y, z)
+NOTE: THIS ONLY WORKS FOR V2  
 same as above; indices for the plots can be chosen from the list under the node_plots() description  
 
 ## Example Scripts
