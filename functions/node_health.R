@@ -360,7 +360,7 @@ export_node_channel_plots <- function(health_data,freq="1 hour",out_path=getwd()
     gA <- ggplotGrob(outplot[[i]][[x]] + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=10),
                                                axis.title=element_text(size=30,face="bold")))
     gB <- ggplotGrob(outplot[[i]][[y]] + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=10),
-                                               axis.title=element_text(size=30,face="bold")) +)
+                                               axis.title=element_text(size=30,face="bold")))
     gC <- ggplotGrob(outplot[[i]][[z]])
     
     if (tides) {
