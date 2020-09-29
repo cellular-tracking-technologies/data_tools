@@ -102,7 +102,7 @@ export_node_channel_plots(health_data,freq,outpath,4,2,1)
 nodes <- unique(health_data$NodeId)
 #produces a list of plots per node showing if/when time stamp on sending vs. receiving mismatches occur, and if there are NA values
 #you can index the list by the vector of nodes passed to it
-#mynodes <- node_plots(health_data,nodes)
+#mynodes <- node_plots(health_data,freq,nodes)
 #90649225 is min time diff to get to 2017
 #for instance mynodes[[1]] corresponds to the plots for nodes[1]
 
