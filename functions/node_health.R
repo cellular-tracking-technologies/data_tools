@@ -134,8 +134,6 @@ node_channel_plots <- function(health, freq) { #freq,
       geom_segment(aes(x = x1, y = y1, xend = x2, yend = y2, colour=col), data=batt) + #size=2
       scale_color_manual(values = c("(0,3.7]" = "#FF0000","(3.7,4]" = "#F5B041","(4,Inf]" = "#00FF00")) +
       scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(plot_data$Time), max(plot_data$Time))) +
-      theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), legend.position = "none", axis.text=element_text(size=10),
-            axis.title=element_text(size=30,face="bold")) +
       scale_y_continuous(name="Batt", limits=c(2,5))
 
 #RSSI scatter plot, A&V lines commented out    
@@ -162,8 +160,6 @@ node_channel_plots <- function(health, freq) { #freq,
       #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
       geom_bar(stat="identity") +
       scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(health_data$Time), max(health_data$Time))) +
-      theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=10),
-            axis.title=element_text(size=30,face="bold")) +
       scale_y_continuous(name="Count", limits=c(0,12))
 
 #check-ins as scaled line overlay
@@ -276,8 +272,8 @@ node_plots <- function(health, nodes, freq) {
     plotter <- plotting[plotting$NodeId==park,]
     
     p = ggplot() + theme_bw() +
-      #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
-      theme(axis.text=element_text(size=15),
+      geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
+      theme(axis.text=element_text(size=10),
             axis.title=element_text(size=30,face="bold")) +
       #scaled: geom_point(data = ea, aes(x = Time, y = rssi, group=1)) +
       geom_point(data = plotter, aes(x = Time, y = RSSI, group=RadioId, colour=RadioId)) +
@@ -288,34 +284,22 @@ node_plots <- function(health, nodes, freq) {
       scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(health$Time), max(health$Time)))
     
     p4 = ggplot(data = plotter, aes(x = Time, y = N, group=RadioId, fill=RadioId)) + theme_bw() +
-      #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
+      geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
       geom_bar(stat="identity", position=position_dodge()) +
       scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(health$Time), max(health$Time))) +
-      theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=15),
-            axis.title=element_text(size=30,face="bold")) +
       scale_y_continuous(name="Count", limits=c(0,12))
     
     plotter <- plotter[!duplicated(plotter$Time),] 
     plotter <- plotter[order(plotter$Time),]
     batt <- data.frame(x1 = head(plotter$Time, -1), x2 = tail(plotter$Time, -1), y1 = head(plotter$batt, -1), y2 = tail(plotter$batt, -1),
                        col = head(plotter$col, -1))
-    
-    p5 = ggplot(data = plotter, aes(x = Time, y = N, group=NodeId, fill=NodeId)) + theme_bw() +
-      #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
-      geom_bar(stat="identity") +
-      scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(health$Time), max(health$Time))) +
-      theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=15),
-            axis.title=element_text(size=30,face="bold")) +
-      scale_y_continuous(name="Count", limits=c(0,12))
 
     #battery
     p3 = ggplot() + theme_bw() +
-      #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
+      geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
       geom_segment(aes(x = x1, y = y1, xend = x2, yend = y2, colour=col), data=batt) + #size=2
       scale_color_manual(values = c("(0,3.7]" = "#FF0000","(3.7,4]" = "#F5B041","(4,Inf]" = "#00FF00")) +
       scale_x_datetime(date_breaks="1 day", date_labels="%b %d", limits=c(min(health$Time), max(health$Time))) +
-      theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=15), #legend.position = "none", 
-            axis.title=element_text(size=30,face="bold")) +
       scale_y_continuous(name="Batt", limits=c(2,5))
     
   #these plots are to see if/where there are date mismatches for the time sent by and received from the node (i.e. GPS fix loss)
@@ -330,7 +314,7 @@ node_plots <- function(health, nodes, freq) {
     
     ea2 <- plot_data[plot_data$match > 0,]
     p1 = ggplot() + theme_bw() +
-      theme(axis.text=element_text(size=15),axis.title=element_text(size=30)) +
+      theme(axis.text=element_text(size=10),axis.title=element_text(size=30)) +
       geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=Inf, ymax=biggest-Inf),fill='light grey') +
       #geom_point(data = ea2, aes(x = Time, y = scaled, group=1)) + 
       geom_point(data = plot_data, aes(x = Time, y = scaled, group=1, colour=is.na(RecordedAt))) + 
@@ -338,14 +322,14 @@ node_plots <- function(health, nodes, freq) {
       scale_x_datetime(date_breaks="1 week", date_labels="%b %d", limits=c(min(health$Time),max(health$Time))) +
       #geom_hline(yintercept = biggest + 1) +
       geom_hline(yintercept = 0) +
-      scale_y_continuous(name="Match?") #limits=c(-2,biggest+3)
+      scale_y_continuous(name="Time Mismatch") #limits=c(-2,biggest+3)
     
-    p2 = ggplot() +
-      geom_point(data = ea2, aes(x = Time, y = timediff, group=1)) + #colour=factor(RadioId)#position = "jitter", 
-      scale_x_datetime(date_breaks="1 week", date_labels="%b %d") + #, limits=c(min(plot_data$Time),max(plot_data$Time)
-      scale_y_continuous(name="Mismatch") #limits=c(0,60)
-    
-  return(list(p1, p4, p3, p1, p2, p5))})
+    p2 = ggplot() + theme_bw() +
+      geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=Inf, ymax=biggest-Inf),fill='light grey') +
+      geom_point(data = ea2, aes(x = Time, y = timediff, colour=RadioId)) + #colour=factor(RadioId)#position = "jitter", 
+      scale_x_datetime(date_breaks="1 week", date_labels="%b %d", limits=c(min(health$Time),max(health$Time))) + #, limits=c(min(plot_data$Time),max(plot_data$Time)
+      scale_y_continuous(name="Mismatches < 60 sec") #limits=c(0,60)
+  return(list(p, p4, p3, p1, p2))})
 return(plots)}
 
 #gps <- read.csv("~/Downloads/89460800120046859680.csv")
@@ -373,8 +357,10 @@ export_node_channel_plots <- function(health_data,freq="1 hour",out_path=getwd()
     print(file_name)
     png(file_name, width=1800, height=1000)
     
-    gA <- ggplotGrob(outplot[[i]][[x]])
-    gB <- ggplotGrob(outplot[[i]][[y]])
+    gA <- ggplotGrob(outplot[[i]][[x]] + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=10),
+                                               axis.title=element_text(size=30,face="bold")))
+    gB <- ggplotGrob(outplot[[i]][[y]] + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=10),
+                                               axis.title=element_text(size=30,face="bold")) +)
     gC <- ggplotGrob(outplot[[i]][[z]])
     
     if (tides) {
@@ -390,16 +376,19 @@ export_node_channel_plots <- function(health_data,freq="1 hour",out_path=getwd()
   }}
 
 #ONLY FOR V2 STATIONS
-export_node_plots <- function(health_data,freq,out_path=getwd(), x=6, y=5, z=3) {
+export_node_plots <- function(health_data,freq,out_path=getwd(), x=2, y=4, z=5) {
   nodes <- unique(health_data$NodeId)
   outplot <- node_plots(health_data, nodes, freq)
   for (i in 1:length(nodes)) {
     file_name = paste(out_path,"node_",nodes[i],".png", sep="")
     print(file_name)
     png(file_name, width=1800, height=1000)
-      
-    gA <- ggplotGrob(outplot[[i]][[x]])
-    gB <- ggplotGrob(outplot[[i]][[y]])
+    gA <- ggplotGrob(outplot[[i]][[x]] +
+                       theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=10),
+                                             axis.title=element_text(size=30,face="bold")))
+    gB <- ggplotGrob(outplot[[i]][[y]] +
+                       theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=10),
+                             axis.title=element_text(size=30,face="bold")))
     gC <- ggplotGrob(outplot[[i]][[z]])
       
     grid::grid.newpage()
