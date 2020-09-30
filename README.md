@@ -14,6 +14,11 @@ A RStudio tutorial is beyond the scope of this readme, but if you need to get st
 
 # How to use These Tools
 
+## Start Here: Example Scripts
+
+"example.R" shows you example implementations of the data management and node health functions (also read comments, functions that produce files are commented out)   
+"locate_example.R" is a template script for running the location functions
+
 There is a subfolder within this repo named "functions" which is full of, well, scripts that contain functions! You'll notice they're often called (via source()) at the top of the example scripts. This loads in the custom functions that I have written to handle CTT data. Ultimately, these will be rolled into an R package.
 
 ## Functions
@@ -90,11 +95,6 @@ To assign x, y and z, look at the description for node_channel_plots() and selec
 #### export_node_plots(health_data, freq, out_path, x, y, z)
 NOTE: THIS ONLY WORKS FOR V2  
 same as above; indices for the plots can be chosen from the list under the node_plots() description  
-
-## Example Scripts
-
-"example.R" shows you example implementations of the data management and node health functions (also read comments, functions that produce files are commented out)   
-"locate_example.R" is a template script for running the location functions
 
 Ideas for R package functions:  
 load_data()  
