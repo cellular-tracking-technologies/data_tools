@@ -14,10 +14,14 @@ A RStudio tutorial is beyond the scope of this readme, but if you need to get st
 
 # How to use These Tools
 
+Double-click the .Rproj file in your local repo folder to launch you into the right working directory, on your working git branch in RStudio. From there, open whatever files you want to modify.
+
 ## Start Here: Example Scripts
 
 - "example.R" shows you example implementations of the data management and node health functions (also read comments, functions that produce files are commented out)   
-- "locate_example.R" is a template script for running the location functions
+- "locate_example.R" is a template script for running the location functions  
+
+I suggest making your own copy of these scripts, renaming them, and modifying them with your file path inputs.
 
 ## About the Functions
 
