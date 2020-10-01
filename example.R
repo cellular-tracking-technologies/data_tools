@@ -26,7 +26,7 @@ source("functions/node_health.R")
 #It can contain any/all of your downloaded data files, just don't manipulate/add your own unrelated/altered files.
 #Unzip any zipped directories therein, but compressed csv files (csv.gz) don't need to be unzipped
 
-infile <- "../data/archbold/aug-sept20"
+infile <- "../data/archbold/sensor"
 
 #This is where you want your output to go
 outpath <- "../plots/"
@@ -78,7 +78,7 @@ export_data(infile, outpath, starttime=NULL, endtime=NULL, tags=NULL)
 
 #this creates a unique ID for each combo of radio + node, summarizes node health variables for the input time interval and each unique combo of node x radio, and then...
 #...expands the data frame to NA fill for missing time x ID combos based on your time interval chosen
-plotting_data <- summarize_health_data(health_data, freq)
+plotting_data <- summarize_health_data(health_data[[1]], freq)
 summarized <- plotting_data[[1]]
 
 ids <- unique(summarized$ID)
@@ -99,7 +99,8 @@ radionode_plots <- node_channel_plots(health_data, freq)
 export_node_channel_plots(health_data,freq,outpath,4,2,1)
 
 ###FOR V2 STATIONS ONLY
-nodes <- unique(health_data$NodeId)
+health_df <- health_data[[1]]
+nodes <- unique(health_df$NodeId)
 #produces a list of plots per node showing if/when time stamp on sending vs. receiving mismatches occur, and if there are NA values
 #you can index the list by the vector of nodes passed to it
 #mynodes <- node_plots(health_data,nodes,freq)

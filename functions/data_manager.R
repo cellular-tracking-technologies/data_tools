@@ -142,6 +142,7 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
     version <- beep_dataset[[2]]
   } else {
     print("no beep files found in directory")
+    beep_dataset <- list(data.frame(), NA)
     beep_data <- data.frame()}
   #beep_data$RadioId <- as.integer(beep_data$RadioId)
 
@@ -158,6 +159,7 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
     health_data <- health_data[!health_data$NodeId %in% check[check$N==1,]$NodeId,]
   } else {
     print("no node health files found in directory")
+    health_dataset <- list(data.frame(), NA)
     health_data <- data.frame()}
   #health_data$RadioId <- as.integer(health_data$RadioId)
 
@@ -170,6 +172,7 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
     gps_data <- gps_dataset[[1]]
   } else { 
     print("no gps files found in directory")
+    gps_dataset <- list(data.frame(), NA)
     gps_data <- data.frame()}
   #gps_data$latitude <- as.numeric(gps_data$latitude)
   #gps_data$longitude <- as.numeric(gps_data$longitude)
@@ -180,7 +183,7 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
   #gps_data$n.fixes <- as.integer(gps_data$n.fixes)
   
   if (!is.null(tags) & !is.null(beep_data) & any(tags %in% beep_data$TagId)) {beep_data <- beep_data[beep_data$TagId %in% tags,]}
-return(list(beep_data, health_data, gps_data))}
+return(list(beep_dataset, health_dataset, gps_dataset))}
 
 Correct_Colnames <- function(df) {
   
@@ -325,9 +328,9 @@ return(nodes)}
 
 export_data <- function(infile, outpath, starttime=NULL, endtime=NULL, tags=NULL) {
   all_data <- load_data(infile, starttime, endtime, tags)
-  beep_data <- all_data[[1]]
-  health_data <- all_data[[2]]
-  gps_data <- all_data[[3]]
+  beep_data <- all_data[[1]][[1]]
+  health_data <- all_data[[2]][[1]]
+  gps_data <- all_data[[3]][[1]]
   now <- Sys.time()
   attr(now, "tzone") <- "UTC"
 if (exists("beep_data")) write.csv(beep_data, file = paste(outpath,"stationbeep_",strftime(now,format='%Y-%m-%d_%H%M%S'),".csv"), row.names = FALSE)
