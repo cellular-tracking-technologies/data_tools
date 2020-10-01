@@ -78,13 +78,12 @@ export_data(infile, outpath, starttime=NULL, endtime=NULL, tags=NULL)
 
 #this creates a unique ID for each combo of radio + node, summarizes node health variables for the input time interval and each unique combo of node x radio, and then...
 #...expands the data frame to NA fill for missing time x ID combos based on your time interval chosen
-plotting_data <- summarize_health_data(health_data[[1]], freq)
+plotting_data <- summarize_health_data(health_data, freq)
 summarized <- plotting_data[[1]]
-
 ids <- unique(summarized$ID)
 
 #this creates a nested list of diagnostic plots for each combo of node and radio ID. You can index the list by the vector of node x ID combos passed to it
-radionode_plots <- node_channel_plots(health_data, freq)
+radionode_plots <- node_channel_plots(health_data, freq, ids)
 #for instance radionode_plots[[1]] corresponds to the plots for ids[1]
 
 #PLOT INDICES
@@ -103,7 +102,7 @@ health_df <- health_data[[1]]
 nodes <- unique(health_df$NodeId)
 #produces a list of plots per node showing if/when time stamp on sending vs. receiving mismatches occur, and if there are NA values
 #you can index the list by the vector of nodes passed to it
-#mynodes <- node_plots(health_data,nodes,freq)
+mynodes <- node_plots(health_data,nodes,freq)
 #90649225 is min time diff to get to 2017
 #for instance mynodes[[1]] corresponds to the plots for nodes[1]
 

@@ -183,7 +183,9 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
   #gps_data$n.fixes <- as.integer(gps_data$n.fixes)
   
   if (!is.null(tags) & !is.null(beep_data) & any(tags %in% beep_data$TagId)) {beep_data <- beep_data[beep_data$TagId %in% tags,]}
-return(list(beep_dataset, health_dataset, gps_dataset))}
+  lst <- list(beep_dataset, health_dataset, gps_dataset)
+  names(lst) <- c("beep", "node", "gps")
+return(lst)}
 
 Correct_Colnames <- function(df) {
   

@@ -48,10 +48,25 @@ source("functions/data_manager.R")
 
 #operations for each unique combination of channel and node, summarized by the specified time interval 
 summarize_health_data <- function(health, freq) {
+  version <- health[[2]]
+  health <- health[[1]]
   health$ID <- paste(health$RadioId, health$NodeId, sep="_")  
   health$time <- cut(health$Time, freq)
   health$timebin <- as.POSIXct(health$time)
   node <- setDT(health)[, .(batt = mean(Battery), RSSI = mean(NodeRSSI), .N), by = .(cut(Time, freq),ID)] #V = mean(SolarVolts), A = mean(SolarCurrent), 
+  if (version > 1) {
+    health[which(health$Longitude < -180 | health$Longitude > 180),]$Longitude <- NA
+    health[which(health$Latitude < -90),]$Latitude <- NA
+    node <- setDT(health)[, .(batt = mean(Battery), RSSI = mean(NodeRSSI), A = mean(SolarCurrent), Lat = mean(Latitude), 
+                              Lon = mean(Longitude), std_lat = sd(Latitude), std_lon = sd(Longitude), .N), by = .(cut(Time, freq),ID)] #V = mean(SolarVolts), , 
+    
+    node$lowlat <- node$Lat - node$std_lat
+    node$uplat <- node$Lat + node$std_lat
+    node$lowlon <- node$Lon - node$std_lon
+    node$uplon <- node$Lon + node$std_lon
+    node$d <- distVincentyEllipsoid(cbind(node$lowlon, node$lowlat), cbind(node$uplon, node$uplat))
+    node$d <- (node$d)/1000
+  }
   node$col <- cut(node$batt, c(0,3.7, 4, Inf))
   #node$color <- "#FF0000"
   #node[node$col=="(4,Inf]",]$color <- "#00FF00"
@@ -60,7 +75,8 @@ summarize_health_data <- function(health, freq) {
   plot_data <- as.data.frame(complete(node,cut,ID))
 #putting the newly summarized time intervals back into the correct data format
   plot_data$Time <- as.POSIXct(plot_data$cut, tz="UTC")
-
+  health <- as.data.frame(health)
+  health$Time <- as.POSIXct(health$Time, tz="UTC")
 #theme_set(theme_classic())
 #qplot(y=wetlands$NodeRSSI, x= 1, geom = "boxplot")
 #for (j in unique(wetlands$ID)) {
@@ -70,58 +86,36 @@ summarize_health_data <- function(health, freq) {
 #}
 return(list(plot_data, health))}
 
-v2_health_data <- function(health, freq) {
-  health$ID <- paste(health$RadioId, health$NodeId, sep="_")
-  health[which(health$Longitude < -180 | health$Longitude > 180),]$Longitude <- NA
-  health[which(health$Latitude < -90),]$Latitude <- NA
-  health$time <- cut(health$Time, freq)
-  health$timebin <- as.POSIXct(health$time)
-  node <- setDT(health)[, .(batt = mean(Battery), RSSI = mean(NodeRSSI), A = mean(SolarCurrent), Lat = mean(Latitude), 
-                            Lon = mean(Longitude), std_lat = sd(Latitude), std_lon = sd(Longitude), .N), by = .(cut(Time, freq),ID)] #V = mean(SolarVolts), , 
-  node$col <- cut(node$batt, c(0,3.7, 4, Inf))
-  node$lowlat <- node$Lat - node$std_lat
-  node$uplat <- node$Lat + node$std_lat
-  node$lowlon <- node$Lon - node$std_lon
-  node$uplon <- node$Lon + node$std_lon
-  node$d <- distVincentyEllipsoid(cbind(node$lowlon, node$lowlat), cbind(node$uplon, node$uplat))
-  node$d <- (node$d)/1000
-  #node$color <- "#FF0000"
-  #node[node$col=="(4,Inf]",]$color <- "#00FF00"
-  #node[node$col=="(3.7,4]",]$color <-  "#F5B041" 
-  #filling missing time intervals with NA values for visualization
-  plot_data <- as.data.frame(complete(node,cut,ID))
-  #putting the newly summarized time intervals back into the correct data format
-  plot_data$Time <- as.POSIXct(plot_data$cut, tz="UTC")
-  
-  health <- as.data.frame(health)
-  health$Time <- as.POSIXct(health$Time, tz="UTC")
-  #health$time <- as.POSIXct(health$time, tz="UTC")
-  #theme_set(theme_classic())
-  #qplot(y=wetlands$NodeRSSI, x= 1, geom = "boxplot")
-  #for (j in unique(wetlands$ID)) {
-  #  each <- wetlands[wetlands$ID==j,]
-  #  boxp <- ggplot(each, aes(factor(ID), NodeRSSI)) + geom_boxplot()# + facet_wrap(~ID, scale="free")
-  #  ggsave(boxp, file=paste("boxp_",j, ".png", sep=''), scale=2)
-  #}
-return(list(plot_data, health))}
-
 gps_data_summary <- function(gps, freq) {
   node <- setDT(gps)[, .(Alt = mean(altitude), good = length(which(quality > 2)), bad = length(which(quality < 3))), by = .(cut(gps.at, freq))]
 return(node)}
 
 #inspect this to find the index if you want to pull plots from the list for an ID x channel combo
-node_channel_plots <- function(health, freq) { #freq, 
+node_channel_plots <- function(health, freq, ids, lat=NULL, lon=NULL) { #freq, 
   version <- health[[2]]
+  plot_dataset <- summarize_health_data(health, freq)
   health <- health[[1]]
   #time <- unlist(strsplit(freq, " "))
   #a <- as.difftime(as.integer(time[1]), unit=time[2])
   minx <- min(health$Time)
   maxx <- max(health$Time)
-  plot_dataset <- summarize_health_data(health, freq)
+  minday <- as.Date(minx)
+  maxday <- as.Date(maxx)
+
   plot_data <- plot_dataset[[1]]
   health_df <- plot_dataset[[2]]
-  filenames <- unique(plot_data$ID)
-  outplots <- lapply(filenames, function(park) {
+  
+  if(!is.null(lat) & !is.null(lon)) {
+    sun <- getSunlightTimes(date=seq.Date(minday,maxday,by=1), keep=c("dawn", "dusk"), lat=lat, lon=lon)
+    pbase <- ggplot() + theme_bw() + theme(legend.position = "none") + geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') 
+  } else if (version > 1) {
+    lat <- mean(health_df$Latitude, na.rm=TRUE)
+    lon <- mean(health_df$Longitude, na.rm=TRUE)
+    sun <- getSunlightTimes(date=seq.Date(minday,maxday,by=1), keep=c("dawn", "dusk"), lat=lat, lon=lon)
+    pbase <- ggplot() + theme_bw() + theme(legend.position = "none") + geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') 
+  } else {pbase <- ggplot() + theme_bw() + theme(legend.position = "none")}
+
+  outplots <- lapply(ids, function(park) {
 #ea <- plot_data[plot_data$RadioId == "2" & plot_data$NodeId == "328b99",]
 #this is for scaling, in order to look for patterns in RSSI in relation to other variables
     ea <- plot_data[plot_data$ID==park,]
@@ -135,16 +129,14 @@ node_channel_plots <- function(health, freq) { #freq,
                        col = head(ea$col, -1))
     
     #battery
-    p = ggplot() + theme_bw() + theme(legend.position = "none") +
-      #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
+    p = pbase +
       geom_segment(aes(x = x1, y = y1, xend = x2, yend = y2, colour=col), data=batt) + #size=2
       scale_color_manual(values = c("(0,3.7]" = "#FF0000","(3.7,4]" = "#F5B041","(4,Inf]" = "#00FF00")) +
       scale_x_datetime(date_labels="%b %d", limits=c(min(minx), max(maxx))) +
       scale_y_continuous(name="Batt", limits=c(2,5))
 
 #RSSI scatter plot, A&V lines commented out    
-    p1 = ggplot() + theme_bw() +
-      #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
+    p1 = pbase + 
       theme(axis.text=element_text(size=10),
                           axis.title=element_text(size=30,face="bold")) +
     #scaled: geom_point(data = ea, aes(x = Time, y = rssi, group=1)) +
@@ -157,20 +149,17 @@ node_channel_plots <- function(health, freq) { #freq,
   #+ scale_y_continuous(name="Count", limits=c(-110,-45))
     
     health_node <- health_df[health_df$ID==park,]
-    boxp2 <- ggplot() + 
-      #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
+    boxp2 <- pbase + #MAKE SURE THIS WORKS WITH DAYLIGHT BACKGROUND
       geom_boxplot(data=health_node, aes(timebin, NodeRSSI, group=time)) +# + facet_wrap(~ID, scale="free")
       scale_x_datetime(date_labels="%b %d", limits=c(min(minx), max(maxx)))
 #number of check-ins
-    p2 = ggplot(data = ea, aes(x = Time, y = N, group=1)) + theme_bw() +
-      #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
-      geom_bar(stat="identity") +
+    p2 = pbase +
+      geom_bar(data = ea, aes(x = Time, y = N, group=1), stat="identity") +
       scale_x_datetime(date_labels="%b %d", limits=c(minx, maxx)) +
       scale_y_continuous(name="Count", limits=c(0,12))
 
 #check-ins as scaled line overlay
-    p3 = ggplot() + theme_bw() +
-      #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') + 
+    p3 = pbase +
       geom_hline(yintercept = threshold) +
       geom_point(data = ea, aes(x = Time, y = rssi, group=1)) +
       geom_line(data = ea, aes(x = Time, y = scale(N), group=1), colour="purple") +
@@ -180,21 +169,9 @@ node_channel_plots <- function(health, freq) { #freq,
   
   return(list(p,p1,p2,p3, boxp2))})
   
-  v2_plots <- function(health, freq) {
-    minx <- min(health$Time)
-    maxx <- max(health$Time)
-    summarized <- v2_health_data(health, freq)
-    plot_data <- summarized[[1]]
-    health_df <- summarized[[2]]
+  if (version > 1) {
     
-    lat <- mean(health_df$Latitude, na.rm=TRUE)
-    lon <- mean(health_df$Longitude, na.rm=TRUE)
-    minday <- as.Date(min(health_df$Time))
-    maxday <- as.Date(max(health_df$Time))
-    sun <- getSunlightTimes(date=seq.Date(minday,maxday,by=1), keep=c("dawn", "dusk"), lat=lat, lon=lon)
-    
-    filenames <- unique(plot_data$ID)
-    outplots <- lapply(filenames, function(park) {
+    outplot <- lapply(ids, function(park) {
       #ea <- plot_data[plot_data$RadioId == "2" & plot_data$NodeId == "328b99",]
       #this is for scaling, in order to look for patterns in RSSI in relation to other variables
       ea <- plot_data[plot_data$ID==park,]
@@ -204,8 +181,7 @@ node_channel_plots <- function(health, freq) { #freq,
       threshold <- ea$rssi[nrow(ea),]
       ea <- ea[-nrow(ea),]
       
-      p = ggplot() + theme_bw() +
-        geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
+      p = pbase +
         #scaled: geom_point(data = ea, aes(x = Time, y = rssi, group=1)) +
         geom_line(data = ea, aes(x = Time, y = Lat, group=1)) +
         #scaled: geom_hline(yintercept = threshold) +
@@ -214,8 +190,7 @@ node_channel_plots <- function(health, freq) { #freq,
         scale_x_datetime(date_labels="%b %d", limits=c(minx, maxx))
       #+ scale_y_continuous(name="Count", limits=c(-110,-45))
       
-      p1 = ggplot() + theme_bw() +
-        geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
+      p1 = pbase +
         #scaled: geom_point(data = ea, aes(x = Time, y = rssi, group=1)) +
         geom_line(data = ea, aes(x = Time, y = Lon, group=1)) +
         #scaled: geom_hline(yintercept = threshold) +
@@ -224,8 +199,7 @@ node_channel_plots <- function(health, freq) { #freq,
         scale_x_datetime(date_labels="%b %d", limits=c(minx, maxx))
       
       #RSSI scatter plot, A&V lines commented out    
-      p2 = ggplot() + theme_bw() +
-        geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
+      p2 = pbase +
         #scaled: geom_point(data = ea, aes(x = Time, y = rssi, group=1)) +
         geom_point(data = ea, aes(x = Time, y = RSSI, group=1)) +
         #scaled: geom_hline(yintercept = threshold) +
@@ -235,8 +209,7 @@ node_channel_plots <- function(health, freq) { #freq,
         scale_x_datetime(date_labels="%b %d", limits=c(minx, maxx))
       #+ scale_y_continuous(name="Count", limits=c(-110,-45))
       
-      p3 = ggplot() + theme_bw() +
-        geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
+      p3 = pbase +
         #scaled: geom_point(data = ea, aes(x = Time, y = rssi, group=1)) +
         geom_bar(data = ea, aes(x = Time, y = d), stat="identity") +
         #scaled: geom_hline(yintercept = threshold) +
@@ -244,12 +217,8 @@ node_channel_plots <- function(health, freq) { #freq,
         #geom_line(data = ea, aes(x = Time, y = scale(A), group=1), colour="orange") +
         #scale_y_continuous(limits=c())
         scale_x_datetime(date_labels="%b %d", limits=c(minx, maxx))
-      
-      return(list(p, p1, p2, p3))})
-    return(outplots)}
-  
-  if (version > 1) {
-    outplot <- v2_plots(health, freq)
+    return(list(p, p1, p2, p3))})
+    
     outplots <- Map(c, outplots, outplot)
   }
   
@@ -261,11 +230,26 @@ return(outplots)}
 
 #ONLY FOR V2 STATIONS
 
-node_plots <- function(health, nodes, freq) {
+node_plots <- function(health, nodes, freq, lat = NULL, lon = NULL) {
   version <- health[[2]]
-  health <- health[[1]]
-  
   plot_dataset <- summarize_health_data(health, freq)
+  health <- health[[1]]
+  minx <- min(health$Time)
+  maxx <- max(health$Time)
+  
+  minday <- as.Date(minx)
+  maxday <- as.Date(maxx)
+  
+  if(!is.null(lat) & !is.null(lon)) {
+    sun <- getSunlightTimes(date=seq.Date(minday,maxday,by=1), keep=c("dawn", "dusk"), lat=lat, lon=lon)
+    pbase <- ggplot() + theme_bw() + theme(legend.position = "none") + geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') 
+  } else if (version > 1) {
+    lat <- mean(health$Latitude, na.rm=TRUE)
+    lon <- mean(health$Longitude, na.rm=TRUE)
+    sun <- getSunlightTimes(date=seq.Date(minday,maxday,by=1), keep=c("dawn", "dusk"), lat=lat, lon=lon)
+    pbase <- ggplot() + theme_bw() + geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') 
+  } else {pbase <- ggplot() + theme_bw()}
+  
   plotting <- plot_dataset[[1]]
   plotting$RadioId <- sapply(strsplit(plotting$ID, "_"), "[[", 1)
   plotting$NodeId <- sapply(strsplit(plotting$ID, "_"), "[[", 2)
@@ -275,8 +259,7 @@ node_plots <- function(health, nodes, freq) {
   #ea <- plot_data[plot_data$NodeId == "496",]
     plotter <- plotting[plotting$NodeId==park,]
     
-    p = ggplot() + theme_bw() +
-      #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
+    p = pbase +
       theme(axis.text=element_text(size=15),
             axis.title=element_text(size=30,face="bold")) +
       #scaled: geom_point(data = ea, aes(x = Time, y = rssi, group=1)) +
@@ -285,14 +268,13 @@ node_plots <- function(health, nodes, freq) {
       geom_hline(yintercept = -95) +
       #geom_line(data = ea, aes(x = Time, y = scale(V), group=1), colour="red") +
       #geom_line(data = ea, aes(x = Time, y = scale(A), group=1), colour="orange") +
-      scale_x_datetime(date_labels="%b %d", limits=c(min(health$Time), max(health$Time))) #date_breaks="1 day"
+      scale_x_datetime(date_labels="%b %d", limits=c(minx, maxx)) #date_breaks="1 day"
     
-    p4 = ggplot(data = plotter) + theme_bw() +
+    p4 = pbase +
       theme(axis.text=element_text(size=15),
             axis.title=element_text(size=30,face="bold")) +
-      #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
-      geom_bar(stat="identity", position=position_dodge(), aes(x = Time, y = N, group=RadioId, fill=RadioId)) +
-      scale_x_datetime(date_labels="%b %d", limits=c(min(health$Time), max(health$Time))) +
+      geom_bar(data = plotter, stat="identity", position=position_dodge(), aes(x = Time, y = N, group=RadioId, fill=RadioId)) +
+      scale_x_datetime(date_labels="%b %d", limits=c(minx, maxx)) +
       scale_y_continuous(name="Count", limits=c(0,12))
     
     plotter <- plotter[!duplicated(plotter$Time),] 
@@ -301,26 +283,16 @@ node_plots <- function(health, nodes, freq) {
                        col = head(plotter$col, -1))
     
     #battery
-    p3 = ggplot() + theme_bw() +
-      #geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') +
+    p3 = pbase +
       geom_segment(aes(x = x1, y = y1, xend = x2, yend = y2, colour=col), data=batt) + #size=2
       scale_color_manual(values = c("(0,3.7]" = "#FF0000","(3.7,4]" = "#F5B041","(4,Inf]" = "#00FF00")) +
-      scale_x_datetime(date_labels="%b %d", limits=c(min(health$Time), max(health$Time))) +
+      scale_x_datetime(date_labels="%b %d", limits=c(minx, maxx)) +
       scale_y_continuous(name="Batt", limits=c(2,5))
   return(list(p, p4, p3))})
-
-  v2_node <- function(health, nodes, freq) {
-    minx <- min(health$Time)
-    maxx <- max(health$Time)
-    lat <- mean(health$Latitude, na.rm=TRUE)
-    lon <- mean(health$Longitude, na.rm=TRUE)
-    minday <- as.Date(min(health$Time))
-    maxday <- as.Date(max(health$Time))
-    sun <- getSunlightTimes(date=seq.Date(minday,maxday,by=1), keep=c("dawn", "dusk"), lat=lat, lon=lon)
-    
+  if (version > 1) {
     health$timediff <- health$Time - health$RecordedAt
     biggest <- as.integer(max(health$timediff[health$timediff < 60]))
-    plots <- lapply(nodes, function(park) {
+    outplots <- lapply(nodes, function(park) {
       plot_data <- health[health$NodeId==park,]
       #these plots are to see if/where there are date mismatches for the time sent by and received from the node (i.e. GPS fix loss)
       plot_data$time <- format(plot_data$Time,'%Y-%m-%d')
@@ -333,8 +305,7 @@ node_plots <- function(health, nodes, freq) {
       plot_data <- plot_data[!duplicated(plot_data$Time),] #not done by channel
       
       ea2 <- plot_data[plot_data$match > 0,]
-      p1 = ggplot() + theme_bw() +
-        geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=Inf, ymax=biggest-Inf),fill='light grey') +
+      p1 = pbase +
         #geom_point(data = ea2, aes(x = Time, y = scaled, group=1)) + 
         geom_point(data = plot_data, aes(x = Time, y = scaled, group=1, colour=is.na(RecordedAt))) + 
         #colour=factor(RadioId)#position = "jitter", 
@@ -343,16 +314,11 @@ node_plots <- function(health, nodes, freq) {
         geom_hline(yintercept = 0) +
         scale_y_continuous(name="Time Mismatch") #limits=c(-2,biggest+3)
       
-      p2 = ggplot() + theme_bw() +
-        geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=Inf, ymax=biggest-Inf),fill='light grey') +
+      p2 = pbase +
         geom_point(data = ea2, aes(x = Time, y = timediff, colour=RadioId)) + #colour=factor(RadioId)#position = "jitter", 
         scale_x_datetime(date_labels="%b %d", limits=c(minx, maxx)) + #, limits=c(min(plot_data$Time),max(plot_data$Time)
         scale_y_continuous(name="Mismatches < 60 sec") #limits=c(0,60)
       return(list(p1, p2))})
-    return(plots)}
-  
-  if (version > 1) {
-    outplots <- v2_node(health, nodes, freq)
     plots <- Map(c, plots, outplots)
   }
   
@@ -373,10 +339,10 @@ gps_plots <- function(gps, freq) {
 return(p1)}
 
 export_node_channel_plots <- function(health,freq="1 hour",out_path=getwd(),x=3,y=2,z=1) {
-  outplot <- node_channel_plots(health, freq)
-  plotdf <- summarize_health_data(health[[1]], freq)
+  plotdf <- summarize_health_data(health, freq)
   plotdf <- plotdf[[1]]
   filenames <- unique(plotdf$ID)
+  outplot <- node_channel_plots(health, freq, filenames)
 
   for (i in 1:length(filenames)) {
     file_name = paste(out_path,"node_",filenames[i],".png", sep="")
