@@ -78,7 +78,7 @@ export_data(infile, outpath, starttime=NULL, endtime=NULL, tags=NULL)
 
 #this creates a unique ID for each combo of radio + node, summarizes node health variables for the input time interval and each unique combo of node x radio, and then...
 #...expands the data frame to NA fill for missing time x ID combos based on your time interval chosen
-plotting_data <- summarize_health_data(health_data[[1]], freq)
+plotting_data <- summarize_health_data(health_data[[1]], freq)sfsf
 summarized <- plotting_data[[1]]
 
 ids <- unique(summarized$ID)
