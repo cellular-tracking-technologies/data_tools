@@ -167,7 +167,7 @@ node_channel_plots <- function(health, freq, ids, lat=NULL, lon=NULL) { #freq,
       theme(axis.text=element_text(size=10),
             axis.title=element_text(size=30,face="bold"))
   
-  return(list(p,p1,p2,p3, boxp2))})
+  return(list(batt = p, RSSI = p1, n = p2, rssi = p3, rssi_box = boxp2))})
   
   if (version > 1) {
     
@@ -217,10 +217,11 @@ node_channel_plots <- function(health, freq, ids, lat=NULL, lon=NULL) { #freq,
         #geom_line(data = ea, aes(x = Time, y = scale(A), group=1), colour="orange") +
         #scale_y_continuous(limits=c())
         scale_x_datetime(date_labels="%b %d", limits=c(minx, maxx))
-    return(list(p, p1, p2, p3))})
+    return(list(lat = p, lng = p1, rssi_scale = p2, d = p3))})
     
     outplots <- Map(c, outplots, outplot)
   }
+  names(outplots) <- ids
   
 return(outplots)}
 
@@ -321,7 +322,7 @@ node_plots <- function(health, nodes, freq, lat = NULL, lon = NULL) {
       return(list(p1, p2))})
     plots <- Map(c, plots, outplots)
   }
-  
+  names(plots) <- nodes
 return(plots)}
 
 #gps <- read.csv("~/Downloads/89460800120046859680.csv")
@@ -338,11 +339,14 @@ gps_plots <- function(gps, freq) {
     geom_bar(stat="identity")
 return(p1)}
 
-export_node_channel_plots <- function(health,freq="1 hour",out_path=getwd(),x=3,y=2,z=1) {
-  plotdf <- summarize_health_data(health, freq)
-  plotdf <- plotdf[[1]]
-  filenames <- unique(plotdf$ID)
-  outplot <- node_channel_plots(health, freq, filenames)
+export_node_channel_plots <- function(plotlist=NULL,health,freq="1 hour",out_path=getwd(),x=3,y=2,z=1) {
+  if (is.null(plotlist)) {
+    plotdf <- summarize_health_data(health, freq)
+    plotdf <- plotdf[[1]]
+    filenames <- unique(plotdf$ID)
+    outplot <- node_channel_plots(health, freq, filenames)} else {
+      outplot <- plotlist
+      filenames <- names(plotlist)}
 
   for (i in 1:length(filenames)) {
     file_name = paste(out_path,"node_",filenames[i],".png", sep="")
@@ -368,10 +372,13 @@ export_node_channel_plots <- function(health,freq="1 hour",out_path=getwd(),x=3,
   }}
 
 #ONLY FOR V2 STATIONS
-export_node_plots <- function(health,freq,out_path=getwd(), x=2, y=1, z=3) {
+export_node_plots <- function(plotlist = NULL, health,freq,out_path=getwd(), x=2, y=1, z=3) {
+  if(is.null(plotlist)) {
   health_data <- health[[1]]
   nodes <- unique(health_data$NodeId)
-  outplot <- node_plots(health, nodes, freq)
+  outplot <- node_plots(health, nodes, freq) } else {
+    outplot <- plotlist
+    nodes <- name(plotlist)}
   for (i in 1:length(nodes)) {
     file_name = paste(out_path,"node_",nodes[i],".png", sep="")
     print(file_name)

@@ -10,11 +10,11 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
   beep_pattern <- '*-data*.*csv*'
   #fancy = '.*CTT-(?P<station_id>[a-fA-F0-9]{12})-(?P<filetype>[a-zA-Z-_]+)+' test if this in correct type of expression gets files
   gps_pattern = '*-gps*.*csv*'
-  health_pattern = '*-node*.*csv*'
+  health_pattern = '-(node|health).*csv*'
 
 #"""load data files from a directory that contains all the compressed (or uncompressed) data files straight off the station"""
   beep_files <- list.files(directory_name, pattern = beep_pattern, full.names = TRUE, recursive = TRUE)
-  beep <- beep_files[grep("^(?=.*data)(?!.*(node|log|gps))", beep_files, perl=TRUE)]
+  beep <- beep_files[grep("^(?=.*data)(?!.*(node|log|gps|health))", beep_files, perl=TRUE)]
   DatePattern = '^[[[:digit:]]{4}-[[[:digit:]]{2}-[[[:digit:]]{2}[T, ][[[:digit:]]{2}:[[[:digit:]]{2}:[[[:digit:]]{2}(.[[[:digit:]]{3})?[Z]?'
   time = "UTC"
 
@@ -85,6 +85,7 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
           # error handler picks up where error was generated, in Bob's script it breaks if header is missing
           print(paste("error merging file:",i, err))
         })
+      df$v <- v
 
     #df <- df[which(ncol(df) == correctn),] how to check to see if number of fields in each row is the same?
     #else {df <- NULL}

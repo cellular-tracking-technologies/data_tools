@@ -26,7 +26,7 @@ source("functions/node_health.R")
 #It can contain any/all of your downloaded data files, just don't manipulate/add your own unrelated/altered files.
 #Unzip any zipped directories therein, but compressed csv files (csv.gz) don't need to be unzipped
 
-infile <- "../data/archbold/sensor"
+infile <- "../data/ABS_TagTest1/data"
 
 #This is where you want your output to go
 outpath <- "../plots/"
@@ -86,6 +86,14 @@ ids <- unique(summarized$ID)
 radionode_plots <- node_channel_plots(health_data, freq, ids)
 #for instance radionode_plots[[1]] corresponds to the plots for ids[1]
 
+#wanna make your plots look different? here's an example of how you can work with the list structure to make your own ggplot mods!
+formatted <- lapply(radionode_plots, function(x) lapply(x, function(y) y + theme(axis.text=element_text(size=10),axis.title=element_text(size=30,face="bold"))))
+
+#change 1 plot in the list (e.g. all of the batt plots)
+batt_mod <- lapply(radionode_plots, function(x) {
+  x[[1]] <- x[[1]] + theme(axis.text=element_text(size=10),axis.title=element_text(size=30,face="bold"))
+  return(x)})
+
 #PLOT INDICES
 #1. RSSI scatter plot
 #2. Battery
@@ -95,7 +103,7 @@ radionode_plots <- node_channel_plots(health_data, freq, ids)
 ## if you want to write out plot images...
 #call the function "export_node_channel_plots(health,outpath,x,y,z)" replacing x, y, z with the integer index of the plot desired for each of the 3 panels
 #the resulting plots will be in "outpath" named "node_<RadioId>_<NodeId>.png"
-export_node_channel_plots(health_data,freq,outpath,4,2,1)
+export_node_channel_plots(health=health_data,freq=freq,out_path=outpath,x=4,y=2,z=1)
 
 ###FOR V2 STATIONS ONLY
 health_df <- health_data[[1]]
