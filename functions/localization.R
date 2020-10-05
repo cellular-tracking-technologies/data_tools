@@ -10,7 +10,7 @@ library(rgdal)
 library(raster)
 library(sf)
 
-beep_prep <- function(df) {
+beep_prep <- function(df, tag_id) {
   ###datafile
   #NodeId, TagId must be string
   ###rawbeepfile
@@ -26,7 +26,7 @@ beep_prep <- function(df) {
   df = df[df$TagRSSI < FILTER_MAX_RSSI,]
   #def beep_count(self):
   #  return self.df.shape[0]
-  if (exists("tag_id")) {
+  if (!is.null(tag_id)) {
     df = df[df$TagId %in% tag_id,]}
   return(df)}
 
@@ -95,15 +95,15 @@ node_prep <- function(df) {
 #  logging.warning('dropped {:,} records after merging node locations'.format(delta))
 #self.df = df
 
-merge_df <- function(beep_df, node_df) {
-  df <- beep_prep(beep_df)
+merge_df <- function(beep_df, node_df, tag_id=NULL, channel=NULL) {
+  df <- beep_prep(beep_df, tag_id)
   nodes_df <- node_prep(node_df)
   beep_count <- nrow(df) 
   if (any(nodes_df$NodeId %in% df$NodeId)) {
   df <- merge(df,nodes_df, by="NodeId") } else {print("none of those nodes are in this data! node file not merged")}
   delta = beep_count - nrow(df)
   if (delta > 0) {print(paste("dropped",delta,"records after merging node locations"))}
-  if (exists("channel")) {
+  if (!is.null(channel)) {
     df <- df[df$RadioId %in% channel,]
   }
   return(df)}
@@ -135,8 +135,8 @@ get_radius_from_rssi <- function(rssi, path_loss_coefficient=5) {
   return(radius)
 }
 
-advanced_resampled_stats <- function(beeps, node, freq) {
-  df <- merge_df(beeps, node)
+advanced_resampled_stats <- function(beeps, node, freq, tag_id=NULL, channel=NULL) {
+  df <- merge_df(beeps, node, tag_id, channel)
   filtered_df <- df %>% thicken(freq, colname="freq") %>%
     group_by(TagId, RadioId, freq, NodeId) %>%
     summarise(max_rssi = max(TagRSSI), beep_count = length(TagRSSI), node_x = max(x), node_y = max(y), min_rssi = min(TagRSSI), std_rssi = sd(TagRSSI),
@@ -146,8 +146,8 @@ advanced_resampled_stats <- function(beeps, node, freq) {
   outdf$radius <- sapply(outdf$max_rssi, get_radius_from_rssi, DEFAULT_PATH_LOSS_COEFFICIENT)
   return(outdf)}
 
-weighted_average <- function(freq, beeps, node, MAX_NODES=0) {
-  df <- merge_df(beeps, node)
+weighted_average <- function(freq, beeps, node, MAX_NODES=0, tag_id=NULL, channel=NULL) {
+  df <- merge_df(beeps, node, tag_id, channel)
   zone = df$zone[1]
   letter = df$letter[1]
   filtered_df <- advanced_resampled_stats(beeps,node,freq)
@@ -182,9 +182,9 @@ weighted_average <- function(freq, beeps, node, MAX_NODES=0) {
   outdf <- spTransform(outdf,CRS("+proj=longlat +datum=WGS84"))
   return(outdf)}
 
-export_locs <- function(y, beeps, node, outpath) {
+export_locs <- function(y, beeps, node, tag_id=NULL, outpath) {
   lapply(y, function(x) {
-    locations <- weighted_average(x, beeps, node)
+    locations <- weighted_average(x, beeps, node, 0, tag_id)
     locations <- data.frame(x=coordinates(locations)[,1], y=coordinates(locations)[,2], locations@data)
     write.csv(locations,paste(outpath,gsub(" ", "", paste("estimates_",x,".csv",sep=""), fixed = TRUE)))})
 }

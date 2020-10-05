@@ -21,16 +21,16 @@ options(scipen = 6, digits = 9) # I prefer to view outputs in non-scientific not
 ## ---------------------------
 
 ## load up the packages we will need:  (un-comment as required)
-list.of.packages <- c("ggplot2", "tidyr", "gridExtra", "suncalc", "geosphere")
+list.of.packages <- c("ggplot2", "tidyr", "suncalc", "geosphere", "egg")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
 require(data.table)
 require(ggplot2)
 require(tidyr)
-require(gridExtra)
 require(suncalc)
 require(geosphere)
+require(egg)
 #BELOW REQUIRED FOR TIDE CALCULATIONS
 #require(rvest)
 #library(stringr)
@@ -107,13 +107,14 @@ node_channel_plots <- function(health, freq, ids, lat=NULL, lon=NULL) { #freq,
   
   if(!is.null(lat) & !is.null(lon)) {
     sun <- getSunlightTimes(date=seq.Date(minday,maxday,by=1), keep=c("dawn", "dusk"), lat=lat, lon=lon)
-    pbase <- ggplot() + theme_bw() + theme(legend.position = "none") + geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') 
+    pbase <- ggplot() + theme_bw() + geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') #+ theme(legend.position = "none")
   } else if (version > 1) {
     lat <- mean(health_df$Latitude, na.rm=TRUE)
     lon <- mean(health_df$Longitude, na.rm=TRUE)
     sun <- getSunlightTimes(date=seq.Date(minday,maxday,by=1), keep=c("dawn", "dusk"), lat=lat, lon=lon)
-    pbase <- ggplot() + theme_bw() + theme(legend.position = "none") + geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') 
-  } else {pbase <- ggplot() + theme_bw() + theme(legend.position = "none")}
+    pbase <- ggplot() + theme_bw() + geom_rect(data=sun, aes(xmin=dusk, xmax=dawn, ymin=-Inf, ymax=Inf),fill='light grey') #+ theme(legend.position = "none") 
+  } else {pbase <- ggplot() + theme_bw() #+ theme(legend.position = "none")
+  }
 
   outplots <- lapply(ids, function(park) {
 #ea <- plot_data[plot_data$RadioId == "2" & plot_data$NodeId == "328b99",]
@@ -352,22 +353,18 @@ export_node_channel_plots <- function(plotlist=NULL,health,freq="1 hour",out_pat
     file_name = paste(out_path,"node_",filenames[i],".png", sep="")
     print(file_name)
     png(file_name, width=1800, height=1000)
-    
-    gA <- ggplotGrob(outplot[[i]][[x]] + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=15),
-                                               axis.title=element_text(size=30,face="bold")))
-    gB <- ggplotGrob(outplot[[i]][[y]] + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=15),
-                                               axis.title=element_text(size=30,face="bold")))
-    gC <- ggplotGrob(outplot[[i]][[z]] + theme(axis.text=element_text(size=15)))
-    
+    myplots <- outplot[[i]][c(x,y,z)]
+    first2 <- myplots[1:(length(myplots)-1)]
+#+ theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=15),
+#                                               axis.title=element_text(size=30,face="bold"))
+#+ theme(axis.title=element_text(size=30,face="bold"), axis.text=element_text(size=15))
     if (tides) {
       tides <- tide_times(longitude, latitude)
-      grid.arrange(outplot[[i]][[x]] +
+      ggarrange(outplot[[i]][[x]] +
                      geom_vline(xintercept = tides$HL[tides$HL$HL=="H",]$time, colour="red") +
                      geom_vline(xintercept = tides$HL[tides$HL$HL=="L",]$time, colour="blue"),
-                   outplot[[i]][[y]], outplot[[i]][[z]], nrow = 3)
-    } else {
-      grid::grid.newpage()
-      grid::grid.draw(rbind(gA, gB, gC))}
+                   outplot[[i]][[y]], outplot[[i]][[z]])
+    } else {ggarrange(plots=myplots, nrow=length(myplots))}
     dev.off()
   }}
 
@@ -383,15 +380,13 @@ export_node_plots <- function(plotlist = NULL, health,freq,out_path=getwd(), x=2
     file_name = paste(out_path,"node_",nodes[i],".png", sep="")
     print(file_name)
     png(file_name, width=1800, height=1000)
-    gA <- ggplotGrob(outplot[[i]][[x]] +
+    gA <- outplot[[i]][[x]] +
                        theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=15),
-                                             axis.title=element_text(size=30,face="bold")))
-    gB <- ggplotGrob(outplot[[i]][[y]] +
+                                             axis.title=element_text(size=30,face="bold"))
+    gB <- outplot[[i]][[y]] +
                        theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=15),
-                             axis.title=element_text(size=30,face="bold")))
-    gC <- ggplotGrob(outplot[[i]][[z]] + theme(axis.text=element_text(size=15)))
-      
-    grid::grid.newpage()
-    grid::grid.draw(rbind(gA, gB, gC))
+                             axis.title=element_text(size=30,face="bold"))
+    gC <- outplot[[i]][[z]] + theme(axis.text=element_text(size=15))
+    ggarrange(plots = list(gA,gB,gC), nrow=3)
     dev.off()}
 }
