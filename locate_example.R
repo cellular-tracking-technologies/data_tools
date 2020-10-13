@@ -48,6 +48,9 @@ locations <- weighted_average(freq[1], beep_data, nodes, 0, tag_id)
 #multi_freq <- lapply(freq, weighted_average, beeps=beep_data, node=nodes) 
 #export_locs(freq, beep_data, nodes, tag_id, outpath)
 
+n <- 2 #this is an example of filtering out locations based on a minimum number of nodes
+locations <- locations[locations$unique_nodes > n,]
+
 locations$ID <- paste(locations$TagId, locations$freq, sep="_")
 locations <- locations[!duplicated(locations$ID),]
 locations <- cbind(locations, locations@coords)
