@@ -355,6 +355,11 @@ export_node_channel_plots <- function(plotlist=NULL,health,freq="1 hour",out_pat
     png(file_name, width=1800, height=1000)
     myplots <- outplot[[i]][c(x,y,z)]
     first2 <- myplots[1:(length(myplots)-1)]
+    formatted <- lapply(first2, function(y) y + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), 
+                                                                            axis.text=element_text(size=15),
+                                                                            axis.title=element_text(size=30,face="bold"))
+                        )
+    myplots <- c(formatted, myplots[length(myplots)])
 #+ theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=15),
 #                                               axis.title=element_text(size=30,face="bold"))
 #+ theme(axis.title=element_text(size=30,face="bold"), axis.text=element_text(size=15))
@@ -369,7 +374,7 @@ export_node_channel_plots <- function(plotlist=NULL,health,freq="1 hour",out_pat
   }}
 
 #ONLY FOR V2 STATIONS
-export_node_plots <- function(plotlist = NULL, health,freq,out_path=getwd(), x=2, y=1, z=3) {
+export_node_plots <- function(plotlist = NULL, health,freq,out_path=getwd(), x=2, y=3, z=1) {
   if(is.null(plotlist)) {
   health_data <- health[[1]]
   nodes <- unique(health_data$NodeId)
