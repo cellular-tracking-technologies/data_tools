@@ -11,6 +11,7 @@ library(raster)
 library(sf)
 
 beep_prep <- function(df, tag_id) {
+  df$Time <- as.POSIXct(df$Time, tz="UTC")
   ###datafile
   #NodeId, TagId must be string
   ###rawbeepfile
