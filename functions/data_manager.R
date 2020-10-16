@@ -102,7 +102,7 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
     remove <- which(!sapply(df_list, is.data.frame))*-1
     if (length(remove) > 0) {df_list <- df_list[remove]} 
     if (length(df_list) > 0) {
-      df <- rbindlist(df_list)
+      df <- rbindlist(df_list, fill=TRUE)
       df <- as.data.frame(df)
       if("Time" %in% colnames(df)) {
         df <- df[order(df$Time),]
