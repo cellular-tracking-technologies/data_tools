@@ -317,7 +317,7 @@ node_plots <- function(health, nodes, freq, lat = NULL, lon = NULL) {
         scale_y_continuous(name="Time Mismatch") #limits=c(-2,biggest+3)
       
       p2 = pbase +
-        geom_point(data = ea2, aes(x = Time, y = timediff, colour=RadioId)) + #colour=factor(RadioId)#position = "jitter", 
+        geom_point(data = ea2, aes(x = Time, y = timediff, colour=factor(RadioId))) + #colour=factor(RadioId)#position = "jitter", 
         scale_x_datetime(date_labels="%b %d", limits=c(minx, maxx)) + #, limits=c(min(plot_data$Time),max(plot_data$Time)
         scale_y_continuous(name="Mismatches < 60 sec") #limits=c(0,60)
       return(list(p1, p2))})
