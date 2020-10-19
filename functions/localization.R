@@ -136,15 +136,25 @@ get_radius_from_rssi <- function(rssi, path_loss_coefficient=5) {
   return(radius)
 }
 
-advanced_resampled_stats <- function(beeps, node, freq, tag_id=NULL, channel=NULL) {
+advanced_resampled_stats <- function(beeps, node, freq, tag_id=NULL, channel=NULL, keep_cols = NULL) {
   df <- merge_df(beeps, node, tag_id, channel)
+  min_max <- list(
+    min = ~min(.x, na.rm = TRUE), 
+    max = ~max(.x, na.rm = TRUE),
+    length = ~length(.x),
+    sd = ~sd(.x, na.rm = TRUE)
+  )
+  cols <- c("TagRSSI", "x", "y")
+  if(!is.null(keep_cols)) {cols <- c(cols, keep_cols)}
   filtered_df <- df %>% thicken(freq, colname="freq") %>%
     group_by(TagId, RadioId, freq, NodeId) %>%
-    summarise(max_rssi = max(TagRSSI), beep_count = length(TagRSSI), node_x = max(x), node_y = max(y), min_rssi = min(TagRSSI), std_rssi = sd(TagRSSI),
-              node_lat = max(node_lat), node_lng = max(node_lng))
+    summarise_at(cols, min_max)
   outdf <- as.data.frame(filtered_df)
   DEFAULT_PATH_LOSS_COEFFICIENT=5
-  outdf$radius <- sapply(outdf$max_rssi, get_radius_from_rssi, DEFAULT_PATH_LOSS_COEFFICIENT)
+  outdf$radius <- sapply(outdf$TagRSSI_max, get_radius_from_rssi, DEFAULT_PATH_LOSS_COEFFICIENT)
+  outdf$beep_count <- outdf$TagRSSI_length
+  outdf$node_x <- outdf$x_min
+  outdf$node_y <- outdf$y_min #could NULL some columns here
   return(outdf)}
 
 weighted_average <- function(freq, beeps, node, MAX_NODES=0, tag_id=NULL, channel=NULL) {
@@ -157,7 +167,7 @@ weighted_average <- function(freq, beeps, node, MAX_NODES=0, tag_id=NULL, channe
   #filtered_df$weight <- filtered_df$beep_count/(filtered_df$max_rssi*-1)#(filtered_df$V1*-1)
   filtered_df$num_x <- filtered_df$node_x*filtered_df$weight
   filtered_df$num_y <- filtered_df$node_y*filtered_df$weight
-  filtered_df <- filtered_df[order(filtered_df$TagId, filtered_df$RadioId, filtered_df$freq, -filtered_df$max_rssi),]
+  filtered_df <- filtered_df[order(filtered_df$TagId, filtered_df$RadioId, filtered_df$freq, -filtered_df$TagRSSI_max),]
   filtered_df <- data.table(filtered_df)
   #WHAT NEEDS TO BE ADDED HERE: SORT BY FREQ THEN MAX RSSI AND ONLY KEEP TOP X ROWS WITHIN EACH RESAMPLE TIME PERIOD
   if (MAX_NODES > 0) {
