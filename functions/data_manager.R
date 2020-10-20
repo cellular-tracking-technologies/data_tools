@@ -140,7 +140,7 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
     print(paste("preparing",len,"beep files for merge from",directory_name,"using the regex", "^(?=.*data)(?!.*(node|log|gps))"))
     beep_dataset <- df_merge(beep, cols=c("Time", "RadioId", "TagId", "NodeId"), starttime = starttime, endtime = endtime)
     beep_data <- beep_dataset[[1]]
-    beep_data[is.na(beep_data$Validated),]$Validated <- 0
+    if(any(is.na(beep_data$Validated))) { beep_data[is.na(beep_data$Validated),]$Validated <- 0 }
     version <- beep_dataset[[2]]
   } else {
     print("no beep files found in directory")
