@@ -174,6 +174,7 @@ advanced_resampled_stats <- function(beeps, node, node_health=NULL, freq, tag_id
   filtered_df <- df %>% thicken(freq, colname="freq", by="Time") %>%
     group_by(TagId, RadioId, freq, NodeId) %>%
     summarise_at(cols, min_max)
+  filtered_df$freq <- as.POSIXct(filtered_df$freq, tz="UTC")
   } else {
     df$freq <- df[,c(calibrate)]
     cols <- c(cols, "Time")
@@ -229,7 +230,8 @@ weighted_average <- function(freq, beeps, node, node_health=NULL, MAX_NODES=0, t
   outdf$letter <- letter
   if (!inherits(outdf$freq, "POSIXct")) {
     outdf$group <- outdf$freq
-    outdf$freq <- outdf$Time}
+    outdf$freq <- outdf$Time
+    }
   outdf$date <- format(outdf$freq, "%Y-%m-%d")
   outdf$time_of_day <- format(outdf$freq, "%H:%M:%s")
   outdf$hour <- as.integer(format(outdf$freq, "%H"))
