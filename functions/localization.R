@@ -107,6 +107,7 @@ merge_df <- function(beep_df, node_df, tag_id=NULL, channel=NULL) {
   if (!is.null(channel)) {
     df <- df[df$RadioId %in% channel,]
   }
+  df$RadioId <- as.integer(df$RadioId)
   return(df)}
 
 ###nodedataset
@@ -136,35 +137,65 @@ get_radius_from_rssi <- function(rssi, path_loss_coefficient=5) {
   return(radius)
 }
 
-advanced_resampled_stats <- function(beeps, node, freq, tag_id=NULL, channel=NULL, keep_cols = NULL) {
+advanced_resampled_stats <- function(beeps, node, node_health, freq, tag_id=NULL, channel=NULL, keep_cols = NULL, calibrate = NULL) {
   df <- merge_df(beeps, node, tag_id, channel)
+  node_health$nodetime <- node_health$Time
+  node_health <- node_health[order(node_health$Time, node_health$NodeId),]
+  node_health$channel <- node_health$RadioId
+  node_health <- data.table(node_health)
+  
+  beep_data <- beep_prep(beeps, tag_id)
+  beep_data <- beep_data[order(beep_data$Time, beep_data$NodeId),]
+  beep_data$beeptime <- beep_data$Time
+  beep_data <- data.table(beep_data)
+  
+  setkey(beep_data, NodeId, Time)
+  setkey(node_health, NodeId, Time)
+  #https://www.r-bloggers.com/understanding-data-table-rolling-joins/
+  nodebeep <- node_health[beep_data, roll = "nearest", mult="first"] 
+  merged_df <- data.table(df)
+  df <- merged_df[nodebeep, on=c("NodeId", "Time", "RadioId", "TagId")]
+  df <- as.data.frame(df)
   min_max <- list(
     min = ~min(.x, na.rm = TRUE), 
     max = ~max(.x, na.rm = TRUE),
     length = ~length(.x),
-    sd = ~sd(.x, na.rm = TRUE)
+    sd = ~sd(.x, na.rm = TRUE),
+    mean = ~mean(.x, na.rm = TRUE)
   )
-  cols <- c("TagRSSI", "x", "y")
+  cols <- c("TagRSSI", "x", "y", "NodeRSSI", "node_lat", "node_lng")
   if(!is.null(keep_cols)) {cols <- c(cols, keep_cols)}
-  filtered_df <- df %>% thicken(freq, colname="freq") %>%
+  if(is.null(calibrate)) {
+  filtered_df <- df %>% thicken(freq, colname="freq", by="Time") %>%
     group_by(TagId, RadioId, freq, NodeId) %>%
     summarise_at(cols, min_max)
+  } else {
+    df$freq <- df[,c(calibrate)]
+    cols <- c(cols, "Time")
+    filtered_df <- df %>% 
+      group_by(TagId, RadioId, freq, NodeId) %>%
+      summarise_at(cols, min_max)
+  }
   outdf <- as.data.frame(filtered_df)
   DEFAULT_PATH_LOSS_COEFFICIENT=5
   outdf$radius <- sapply(outdf$TagRSSI_max, get_radius_from_rssi, DEFAULT_PATH_LOSS_COEFFICIENT)
   outdf$beep_count <- outdf$TagRSSI_length
   outdf$node_x <- outdf$x_min
   outdf$node_y <- outdf$y_min #could NULL some columns here
+  outdf$node_dff <- (max(outdf$NodeRSSI_mean) - outdf$NodeRSSI_mean)
+  outdf$node_exp <- outdf$node_dff^(2)
   return(outdf)}
 
-weighted_average <- function(freq, beeps, node, MAX_NODES=0, tag_id=NULL, channel=NULL) {
+weighted_average <- function(freq, beeps, node, node_health, MAX_NODES=0, tag_id=NULL, channel=NULL, calibrate = NULL, keep_cols = NULL) {
+  
   df <- merge_df(beeps, node, tag_id, channel)
-  zone = df$zone[1]
-  letter = df$letter[1]
-  filtered_df <- advanced_resampled_stats(beeps,node,freq)
+  
+  zone <- df$zone[1]
+  letter <- df$letter[1]
+  filtered_df <- advanced_resampled_stats(beeps = beeps, node = node, node_health = node_health, freq = freq, calibrate = calibrate, keep_cols = keep_cols)
   #filtered_df <- merge(filtered_df, noderssi, by="NodeId")
-  filtered_df$weight <- filtered_df$beep_count
-  #filtered_df$weight <- filtered_df$beep_count/(filtered_df$max_rssi*-1)#(filtered_df$V1*-1)
+  #filtered_df$weight <- filtered_df$beep_count
+  filtered_df$weight <- (filtered_df$beep_count)/(filtered_df$TagRSSI_mean)
   filtered_df$num_x <- filtered_df$node_x*filtered_df$weight
   filtered_df$num_y <- filtered_df$node_y*filtered_df$weight
   filtered_df <- filtered_df[order(filtered_df$TagId, filtered_df$RadioId, filtered_df$freq, -filtered_df$TagRSSI_max),]
@@ -173,8 +204,15 @@ weighted_average <- function(freq, beeps, node, MAX_NODES=0, tag_id=NULL, channe
   if (MAX_NODES > 0) {
     filtered_df <- filtered_df[, head(.SD, MAX_NODES), by=c("TagId", "RadioId", "freq")]
   }
+  
+  if (!is.null(calibrate)) {
+    outdf <- filtered_df %>% group_by(TagId, RadioId, freq) %>%
+      summarise(num_x = sum(num_x), num_y = sum(num_y), total=sum(weight), unique_nodes = length(unique(NodeId)), easting = mean(node_x), northing = mean(node_y), Time = max(Time_max)) #lat = mean(node_lat), lng = mean(node_lng), 
+  } else {
   outdf <- filtered_df %>% group_by(TagId, RadioId, freq) %>%
-    summarise(num_x = sum(num_x), num_y = sum(num_y), total=sum(weight), unique_nodes = length(unique(NodeId)), easting = mean(node_x), northing = mean(node_y)) #lat = mean(node_lat), lng = mean(node_lng), 
+    summarise(num_x = sum(num_x), num_y = sum(num_y), total=sum(weight), unique_nodes = length(unique(NodeId)), easting = mean(node_x), northing = mean(node_y))
+  }
+  #lat = mean(node_lat), lng = mean(node_lng), 
   outdf <- as.data.frame(outdf)
   outdf$avg_x <- outdf$num_x / outdf$total
   outdf$avg_y <- outdf$num_y / outdf$total
@@ -184,6 +222,9 @@ weighted_average <- function(freq, beeps, node, MAX_NODES=0, tag_id=NULL, channe
   #CALCULATE BACK TO LAT/LNG?
   outdf$zone <- zone
   outdf$letter <- letter
+  if (!inherits(outdf$freq, "POSIXct")) {
+    outdf$group <- outdf$freq
+    outdf$freq <- outdf$Time}
   outdf$date <- format(outdf$freq, "%Y-%m-%d")
   outdf$time_of_day <- format(outdf$freq, "%H:%M:%s")
   outdf$hour <- as.integer(format(outdf$freq, "%H"))

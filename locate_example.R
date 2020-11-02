@@ -8,10 +8,10 @@ source("functions/data_manager.R")
 source("functions/localization.R")
 
 ###EDIT THESE VALUES
-infile <- "../data/ABS_TagTest1/data"
+infile <- "../data/indigo"
 outpath <- "../output/"
 
-tags <- read.csv("../data/ABS_TagTest1/supp/tags-to-analyze.csv", as.is=TRUE, na.strings=c("NA", "")) #uppercase node letters
+tags <- read.csv("../data/indigo/snake_tags.csv", as.is=TRUE, na.strings=c("NA", "")) #uppercase node letters
 
 all_data <- load_data(infile)
 beep_data <- all_data[[1]][[1]]
@@ -19,7 +19,7 @@ beep_data <- all_data[[1]][[1]]
 
 #nodes <- node_file(all_data[[2]][[1]])
 ###looking for a file with the column names NodeId, lat, lng IN THAT ORDER
-nodes <- read.csv("../data/ABS_TagTest1/supp/rh-node-locations-2020-10-05.csv", as.is=TRUE, na.strings=c("NA", ""), strip.white=TRUE) #uppercase node letters
+nodes <- read.csv("../data/ABS_TagTest1/all-node-locations-2020-10-05.csv", as.is=TRUE, na.strings=c("NA", ""), strip.white=TRUE) #uppercase node letters
 nodes <- nodes[,c("NodeId", "lat", "lng")]
 nodes$NodeId <- toupper(nodes$NodeId)
 
@@ -40,11 +40,11 @@ freq <- c("3 min", "10 min")
 max_nodes <- 0 #how many nodes should be used in the localization calculation?
 df <- merge_df(beep_data, nodes, tag_id)
 
-resampled <- advanced_resampled_stats(beep_data, nodes, freq[1], tag_id)
+resampled <- advanced_resampled_stats(beep_data = beep_data, node = nodes, freq = freq[1], tag_id = tag_id)
 p3 = ggplot(data=resampled, aes(x=freq, y=max_rssi, group=NodeId, colour=NodeId)) +
   geom_line()
 
-locations <- weighted_average(freq[1], beep_data, nodes, 0, tag_id)
+locations <- weighted_average(freq[1], beep_data, nodes, all_data[[2]][[1]], 0, tag_id)
 #multi_freq <- lapply(freq, weighted_average, beeps=beep_data, node=nodes) 
 #export_locs(freq, beep_data, nodes, tag_id, outpath)
 
@@ -80,6 +80,6 @@ my_nodes <- st_as_sf(nodes_spatial)
 ggplot() + 
   #geom_point(data=my_locs, aes(x=long,y=lat))
   #  ggmap(ph_basemap) +
-  geom_sf(data = locs, aes(colour=TagId), inherit.aes = FALSE) + 
+  #geom_sf(data = locs, aes(colour=TagId), inherit.aes = FALSE) + 
   geom_sf(data = my_nodes) +
   geom_text(data = nodes, aes(x=lng, y=lat, label = NodeId), size = 5)

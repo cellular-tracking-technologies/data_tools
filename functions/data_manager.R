@@ -108,7 +108,10 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
           # error handler picks up where error was generated, in Bob's script it breaks if header is missing
           print(paste("error merging file:",i, err))
         })
-      df$v <- v
+      
+      if(exists("v")) {
+        df$v <- v
+      } else {v <- NULL}
 
     #df <- df[which(ncol(df) == correctn),] how to check to see if number of fields in each row is the same?
     #else {df <- NULL}
