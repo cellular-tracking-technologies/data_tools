@@ -55,7 +55,7 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
         }
         
         df <- df[which(indx == correct),]
-        df <- df[-which(row.names(df)=="NA"),]
+        if(any(row.names(df) == "NA")) {df <- df[-which(row.names(df)=="NA"),]}
         df <- df[,colnames(df) %in% known]
       }
       
