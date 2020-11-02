@@ -137,24 +137,29 @@ get_radius_from_rssi <- function(rssi, path_loss_coefficient=5) {
   return(radius)
 }
 
-advanced_resampled_stats <- function(beeps, node, node_health, freq, tag_id=NULL, channel=NULL, keep_cols = NULL, calibrate = NULL) {
+advanced_resampled_stats <- function(beeps, node, node_health=NULL, freq, tag_id=NULL, channel=NULL, keep_cols = NULL, calibrate = NULL) {
   df <- merge_df(beeps, node, tag_id, channel)
-  node_health$nodetime <- node_health$Time
-  node_health <- node_health[order(node_health$Time, node_health$NodeId),]
-  node_health$channel <- node_health$RadioId
-  node_health <- data.table(node_health)
+  cols <- c("TagRSSI", "x", "y", "node_lat", "node_lng")
+  if(!is.null(node_health)) {
+    node_health$nodetime <- node_health$Time
+    node_health <- node_health[order(node_health$Time, node_health$NodeId),]
+    node_health$channel <- node_health$RadioId
+    node_health <- data.table(node_health)
   
-  beep_data <- beep_prep(beeps, tag_id)
-  beep_data <- beep_data[order(beep_data$Time, beep_data$NodeId),]
-  beep_data$beeptime <- beep_data$Time
-  beep_data <- data.table(beep_data)
+    beep_data <- beep_prep(beeps, tag_id)
+    beep_data <- beep_data[order(beep_data$Time, beep_data$NodeId),]
+    beep_data$beeptime <- beep_data$Time
+    beep_data <- data.table(beep_data)
   
-  setkey(beep_data, NodeId, Time)
-  setkey(node_health, NodeId, Time)
+    setkey(beep_data, NodeId, Time)
+    setkey(node_health, NodeId, Time)
   #https://www.r-bloggers.com/understanding-data-table-rolling-joins/
-  nodebeep <- node_health[beep_data, roll = "nearest", mult="first"] 
-  merged_df <- data.table(df)
-  df <- merged_df[nodebeep, on=c("NodeId", "Time", "RadioId", "TagId")]
+    nodebeep <- node_health[beep_data, roll = "nearest", mult="first"] 
+    merged_df <- data.table(df)
+    df <- merged_df[nodebeep, on=c("NodeId", "Time", "RadioId", "TagId")]
+    cols <- c(cols, "NodeRSSI")
+  }
+  
   df <- as.data.frame(df)
   min_max <- list(
     min = ~min(.x, na.rm = TRUE), 
@@ -163,7 +168,7 @@ advanced_resampled_stats <- function(beeps, node, node_health, freq, tag_id=NULL
     sd = ~sd(.x, na.rm = TRUE),
     mean = ~mean(.x, na.rm = TRUE)
   )
-  cols <- c("TagRSSI", "x", "y", "NodeRSSI", "node_lat", "node_lng")
+ 
   if(!is.null(keep_cols)) {cols <- c(cols, keep_cols)}
   if(is.null(calibrate)) {
   filtered_df <- df %>% thicken(freq, colname="freq", by="Time") %>%
@@ -186,7 +191,7 @@ advanced_resampled_stats <- function(beeps, node, node_health, freq, tag_id=NULL
   outdf$node_exp <- outdf$node_dff^(2)
   return(outdf)}
 
-weighted_average <- function(freq, beeps, node, node_health, MAX_NODES=0, tag_id=NULL, channel=NULL, calibrate = NULL, keep_cols = NULL) {
+weighted_average <- function(freq, beeps, node, node_health=NULL, MAX_NODES=0, tag_id=NULL, channel=NULL, calibrate = NULL, keep_cols = NULL) {
   
   df <- merge_df(beeps, node, tag_id, channel)
   
@@ -236,7 +241,7 @@ weighted_average <- function(freq, beeps, node, node_health, MAX_NODES=0, tag_id
 
 export_locs <- function(y, beeps, node, tag_id=NULL, outpath) {
   lapply(y, function(x) {
-    locations <- weighted_average(x, beeps, node, 0, tag_id)
+    locations <- weighted_average(freq = x, beeps = beeps, node = node, MAX_NODES = 0, tag_id = tag_id)
     locations <- data.frame(x=coordinates(locations)[,1], y=coordinates(locations)[,2], locations@data)
     write.csv(locations,paste(outpath,gsub(" ", "", paste("estimates_",x,".csv",sep=""), fixed = TRUE)))})
 }
