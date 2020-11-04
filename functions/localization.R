@@ -188,8 +188,8 @@ advanced_resampled_stats <- function(beeps, node, node_health=NULL, freq, tag_id
   outdf$beep_count <- outdf$TagRSSI_length
   outdf$node_x <- outdf$x_min
   outdf$node_y <- outdf$y_min #could NULL some columns here
-  outdf$node_dff <- (max(outdf$NodeRSSI_mean) - outdf$NodeRSSI_mean)
-  outdf$node_exp <- outdf$node_dff^(2)
+  #outdf$node_dff <- (max(outdf$NodeRSSI_mean) - outdf$NodeRSSI_mean)
+  #outdf$node_exp <- outdf$node_dff^(2)
   return(outdf)}
 
 weighted_average <- function(freq, beeps, node, node_health=NULL, MAX_NODES=0, tag_id=NULL, channel=NULL, calibrate = NULL, keep_cols = NULL) {
