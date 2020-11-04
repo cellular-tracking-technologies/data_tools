@@ -40,7 +40,7 @@ freq <- c("3 min", "10 min")
 max_nodes <- 0 #how many nodes should be used in the localization calculation?
 df <- merge_df(beep_data, nodes, tag_id)
 
-resampled <- advanced_resampled_stats(beep_data = beep_data, node = nodes, freq = freq[1], tag_id = tag_id)
+resampled <- advanced_resampled_stats(beeps = beep_data, node = nodes, freq = freq[1], tag_id = tag_id)
 p3 = ggplot(data=resampled, aes(x=freq, y=max_rssi, group=NodeId, colour=NodeId)) +
   geom_line()
 
