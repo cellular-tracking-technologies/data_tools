@@ -174,7 +174,7 @@ advanced_resampled_stats <- function(beeps, node, node_health=NULL, freq, tag_id
   filtered_df <- df %>% thicken(freq, colname="freq", by="Time") %>%
     group_by(TagId, RadioId, freq, NodeId) %>%
     summarise_at(cols, min_max)
-  filtered_df$freq <- as.POSIXct(filtered_df$freq, tz="UTC")
+  #filtered_df$freq <- as.POSIXct(filtered_df$freq, tz="UTC")
   } else {
     df$freq <- df[,c(calibrate)]
     cols <- c(cols, "Time")
@@ -183,6 +183,7 @@ advanced_resampled_stats <- function(beeps, node, node_health=NULL, freq, tag_id
       summarise_at(cols, min_max)
   }
   outdf <- as.data.frame(filtered_df)
+  outdf$freq <- as.POSIXct(outdf$freq, tz="UTC")
   DEFAULT_PATH_LOSS_COEFFICIENT=5
   outdf$radius <- sapply(outdf$TagRSSI_max, get_radius_from_rssi, DEFAULT_PATH_LOSS_COEFFICIENT)
   outdf$beep_count <- outdf$TagRSSI_length
@@ -198,25 +199,29 @@ weighted_average <- function(freq, beeps, node, node_health=NULL, MAX_NODES=0, t
   
   zone <- df$zone[1]
   letter <- df$letter[1]
-  filtered_df <- advanced_resampled_stats(beeps = beeps, node = node, node_health = node_health, freq = freq, calibrate = calibrate, keep_cols = keep_cols)
+  filtered_df <- advanced_resampled_stats(beeps = beeps, node = node, node_health = node_health, freq = freq, tag_id = tag_id, calibrate = calibrate, keep_cols = keep_cols)
   #filtered_df <- merge(filtered_df, noderssi, by="NodeId")
   #filtered_df$weight <- filtered_df$beep_count
+  filtered_df$id <- paste(filtered_df$TagId, filtered_df$freq, filtered_df$NodeId)
+  filtered_df <- filtered_df[order(filtered_df$id, -filtered_df$TagRSSI_mean, -filtered_df$beep_count),]
+  filtered_df <- filtered_df[!duplicated(filtered_df$id),]
+  
   filtered_df$weight <- (filtered_df$beep_count)/(filtered_df$TagRSSI_mean)
   filtered_df$num_x <- filtered_df$node_x*filtered_df$weight
   filtered_df$num_y <- filtered_df$node_y*filtered_df$weight
-  filtered_df <- filtered_df[order(filtered_df$TagId, filtered_df$RadioId, filtered_df$freq, -filtered_df$TagRSSI_max),]
+  filtered_df <- filtered_df[order(filtered_df$TagId, filtered_df$freq, -filtered_df$TagRSSI_mean),]
   filtered_df <- data.table(filtered_df)
   #WHAT NEEDS TO BE ADDED HERE: SORT BY FREQ THEN MAX RSSI AND ONLY KEEP TOP X ROWS WITHIN EACH RESAMPLE TIME PERIOD
   if (MAX_NODES > 0) {
-    filtered_df <- filtered_df[, head(.SD, MAX_NODES), by=c("TagId", "RadioId", "freq")]
+    filtered_df <- filtered_df[, head(.SD, MAX_NODES), by=c("TagId", "freq")]
   }
   
   if (!is.null(calibrate)) {
-    outdf <- filtered_df %>% group_by(TagId, RadioId, freq) %>%
-      summarise(num_x = sum(num_x), num_y = sum(num_y), total=sum(weight), unique_nodes = length(unique(NodeId)), easting = mean(node_x), northing = mean(node_y), Time = max(Time_max)) #lat = mean(node_lat), lng = mean(node_lng), 
+    outdf <- filtered_df %>% group_by(TagId, freq) %>%
+      summarise(num_x = sum(num_x, na.rm=TRUE), num_y = sum(num_y, na.rm=TRUE), total=sum(weight, na.rm=TRUE), unique_nodes = length(unique(NodeId), na.rm=TRUE), easting = mean(node_x, na.rm=TRUE), northing = mean(node_y, na.rm=TRUE), Time = max(Time_max, na.rm=TRUE)) #lat = mean(node_lat), lng = mean(node_lng), 
   } else {
-  outdf <- filtered_df %>% group_by(TagId, RadioId, freq) %>%
-    summarise(num_x = sum(num_x), num_y = sum(num_y), total=sum(weight), unique_nodes = length(unique(NodeId)), easting = mean(node_x), northing = mean(node_y))
+  outdf <- filtered_df %>% group_by(TagId, freq) %>%
+    summarise(num_x = sum(num_x, na.rm=TRUE), num_y = sum(num_y, na.rm=TRUE), total=sum(weight, na.rm=TRUE), unique_nodes = length(unique(NodeId)), easting = mean(node_x, na.rm=TRUE), northing = mean(node_y, na.rm=TRUE))
   }
   #lat = mean(node_lat), lng = mean(node_lng), 
   outdf <- as.data.frame(outdf)
@@ -233,7 +238,7 @@ weighted_average <- function(freq, beeps, node, node_health=NULL, MAX_NODES=0, t
     outdf$freq <- outdf$Time
     }
   outdf$date <- format(outdf$freq, "%Y-%m-%d")
-  outdf$time_of_day <- format(outdf$freq, "%H:%M:%s")
+  outdf$time_of_day <- format(outdf$freq, "%H:%M:%S")
   outdf$hour <- as.integer(format(outdf$freq, "%H"))
   outdf <- outdf[complete.cases(outdf),]
   coordinates(outdf) <- ~avg_x+avg_y
