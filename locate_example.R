@@ -51,8 +51,8 @@ locations <- weighted_average(freq[1], beep_data, nodes, all_data[[2]][[1]], 0, 
 n <- 2 #this is an example of filtering out locations based on a minimum number of nodes
 locations <- locations[locations$unique_nodes > n,]
 
-locations$ID <- paste(locations$TagId, locations$freq, sep="_")
-locations <- locations[!duplicated(locations$ID),]
+#locations$ID <- paste(locations$TagId, locations$freq, sep="_")
+#locations <- locations[!duplicated(locations$ID),]
 locations <- cbind(locations, locations@coords)
 
 time <- "1 day"
