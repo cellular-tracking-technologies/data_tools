@@ -223,7 +223,7 @@ weighted_average <- function(freq, beeps, node, node_health=NULL, MAX_NODES=0, t
   
   if (!is.null(calibrate)) {
     outdf <- filtered_df %>% group_by(TagId, freq) %>%
-      summarise(num_x = sum(num_x, na.rm=TRUE), num_y = sum(num_y, na.rm=TRUE), total=sum(weight, na.rm=TRUE), unique_nodes = length(unique(NodeId), na.rm=TRUE), easting = mean(node_x, na.rm=TRUE), northing = mean(node_y, na.rm=TRUE), Time = max(Time_max, na.rm=TRUE)) #lat = mean(node_lat), lng = mean(node_lng), 
+      summarise(num_x = sum(num_x, na.rm=TRUE), num_y = sum(num_y, na.rm=TRUE), total=sum(weight, na.rm=TRUE), unique_nodes = length(unique(NodeId)), easting = mean(node_x, na.rm=TRUE), northing = mean(node_y, na.rm=TRUE), Time = max(Time_max, na.rm=TRUE)) #lat = mean(node_lat), lng = mean(node_lng), 
   } else {
   outdf <- filtered_df %>% group_by(TagId, freq) %>%
     summarise(num_x = sum(num_x, na.rm=TRUE), num_y = sum(num_y, na.rm=TRUE), total=sum(weight, na.rm=TRUE), unique_nodes = length(unique(NodeId)), easting = mean(node_x, na.rm=TRUE), northing = mean(node_y, na.rm=TRUE))
