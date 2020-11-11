@@ -183,7 +183,8 @@ advanced_resampled_stats <- function(beeps, node, node_health=NULL, freq, tag_id
       summarise_at(cols, min_max)
   }
   outdf <- as.data.frame(filtered_df)
-  outdf$freq <- as.POSIXct(outdf$freq, tz="UTC")
+  if(inherits(outdf$freq, "Date")) {outdf$freq <- as.POSIXct(paste(outdf$freq, "00:00:00"), tz="UTC")}
+
   DEFAULT_PATH_LOSS_COEFFICIENT=5
   outdf$radius <- sapply(outdf$TagRSSI_max, get_radius_from_rssi, DEFAULT_PATH_LOSS_COEFFICIENT)
   outdf$beep_count <- outdf$TagRSSI_length
@@ -211,6 +212,10 @@ weighted_average <- function(freq, beeps, node, node_health=NULL, MAX_NODES=0, t
   filtered_df$num_y <- filtered_df$node_y*filtered_df$weight
   filtered_df <- filtered_df[order(filtered_df$TagId, filtered_df$freq, -filtered_df$TagRSSI_mean),]
   filtered_df <- data.table(filtered_df)
+  
+  allnodes <- filtered_df[, length(unique(NodeId)), by=c("TagId", "freq")]
+  allnodes$pid <- paste(allnodes$TagId, allnodes$freq)
+
   #WHAT NEEDS TO BE ADDED HERE: SORT BY FREQ THEN MAX RSSI AND ONLY KEEP TOP X ROWS WITHIN EACH RESAMPLE TIME PERIOD
   if (MAX_NODES > 0) {
     filtered_df <- filtered_df[, head(.SD, MAX_NODES), by=c("TagId", "freq")]
@@ -224,6 +229,8 @@ weighted_average <- function(freq, beeps, node, node_health=NULL, MAX_NODES=0, t
     summarise(num_x = sum(num_x, na.rm=TRUE), num_y = sum(num_y, na.rm=TRUE), total=sum(weight, na.rm=TRUE), unique_nodes = length(unique(NodeId)), easting = mean(node_x, na.rm=TRUE), northing = mean(node_y, na.rm=TRUE))
   }
   #lat = mean(node_lat), lng = mean(node_lng), 
+  outdf$id <- paste(outdf$TagId, outdf$freq)
+  outdf$total_nodes <- allnodes$V1[match(outdf$id, allnodes$pid)]
   outdf <- as.data.frame(outdf)
   outdf$avg_x <- outdf$num_x / outdf$total
   outdf$avg_y <- outdf$num_y / outdf$total
