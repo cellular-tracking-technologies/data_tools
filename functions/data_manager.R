@@ -42,19 +42,24 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
         print(v)
         if (y=="beep" & v < 2) {
           correct <- 5
+          df <- df[which(indx == correct),]
         } else if (y == "beep" & v > 1) {
           correct <- 6
+          df <- df[which(indx == correct | indx == 5),]
         } else if (y=="node" & v < 2) {
           correct <- 6
+          df <- df[which(indx == correct),]
         } else if (y=="node" & v > 1) {
           correct <- 13
+          df <- df[which(indx == correct),]
         } else if (y=="gps" & v < 2) {
           correct <- 6
+          df <- df[which(indx == correct),]
         } else {
           correct <- 9
+          df <- df[which(indx == correct),]
         }
         
-        df <- df[which(indx == correct),]
         if(any(row.names(df) == "NA")) {df <- df[-which(row.names(df)=="NA"),]}
         df <- df[,colnames(df) %in% known]
       }
