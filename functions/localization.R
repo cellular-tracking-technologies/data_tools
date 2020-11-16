@@ -207,7 +207,7 @@ weighted_average <- function(freq, beeps, node, node_health=NULL, MAX_NODES=0, t
   filtered_df$id <- paste(filtered_df$TagId, filtered_df$freq, filtered_df$NodeId)
   filtered_df <- filtered_df[order(filtered_df$id, -filtered_df$TagRSSI_mean, -filtered_df$beep_count),]
   filtered_df <- filtered_df[!duplicated(filtered_df$id),]
-  filtered_df <- filtered_df[filtered_df$TagRSSI_mean > -97,]
+  filtered_df <- filtered_df[filtered_df$TagRSSI_mean > -100,]
   filtered_df$weight <- (filtered_df$beep_count)/(filtered_df$TagRSSI_mean)
   filtered_df$num_x <- filtered_df$node_x*filtered_df$weight
   filtered_df$num_y <- filtered_df$node_y*filtered_df$weight
