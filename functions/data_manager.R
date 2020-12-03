@@ -57,7 +57,7 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
           df <- df[which(indx == correct),]
         } else {
           correct <- 9
-          df <- df[which(indx == correct),]
+          df <- df[which(indx == correct | indx == 6),]
         }
         
         if(any(row.names(df) == "NA")) {df <- df[-which(row.names(df)=="NA"),]}
