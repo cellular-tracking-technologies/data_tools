@@ -54,7 +54,7 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
           df <- df[which(indx == correct),]
         } else if (y=="gps" & v < 2) {
           correct <- 6
-          df <- df[which(indx == correct),]
+          df <- df[which(indx == correct | indx == 9),]
         } else {
           correct <- 9
           df <- df[which(indx == correct | indx == 6),]
@@ -216,7 +216,7 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
   #gps_data$n.fixes <- as.integer(gps_data$n.fixes)
   
   if (!is.null(tags) & !is.null(beep_data) & any(tags %in% beep_data$TagId)) {beep_data <- beep_data[beep_data$TagId %in% tags,]}
-  lst <- list(beep_dataset, health_dataset, gps_dataset)
+  lst <- list(list(beep_data, beep_dataset[[2]]), health_dataset, gps_dataset)
   names(lst) <- c("beep", "node", "gps")
 return(lst)}
 
