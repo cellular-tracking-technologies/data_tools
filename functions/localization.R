@@ -161,13 +161,19 @@ advanced_resampled_stats <- function(beeps, node, node_health=NULL, freq, tag_id
     cols <- c(cols, "NodeRSSI")
   }
   
+  getmode <- function(v) {
+    uniqv <- unique(v)
+    uniqv[which.max(tabulate(match(v, uniqv)))]
+  }
+  
   df <- as.data.frame(df)
   min_max <- list(
     min = ~min(.x, na.rm = TRUE), 
     max = ~max(.x, na.rm = TRUE),
     length = ~length(.x),
     sd = ~sd(.x, na.rm = TRUE),
-    mean = ~mean(.x, na.rm = TRUE)
+    mean = ~mean(.x, na.rm = TRUE),
+    mode = ~getmode(.x)
   )
  
   if(!is.null(keep_cols)) {cols <- c(cols, keep_cols)}
