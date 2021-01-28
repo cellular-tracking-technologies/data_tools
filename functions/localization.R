@@ -201,7 +201,7 @@ advanced_resampled_stats <- function(beeps, node, node_health=NULL, freq, tag_id
   #outdf$node_exp <- outdf$node_dff^(2)
   return(outdf)}
 
-weighted_average <- function(freq, beeps, node, node_health=NULL, MAX_NODES=0, tag_id=NULL, calibrate = NULL, keep_cols = NULL, latlng = TRUE) {
+weighted_average <- function(freq, beeps, node, node_health=NULL, MAX_NODES=0, tag_id=NULL, calibrate = NULL, keep_cols = NULL, latlng = TRUE, minRSSI = 0) {
   
   df <- merge_df(beeps, node, tag_id, latlng)
   
@@ -213,7 +213,7 @@ weighted_average <- function(freq, beeps, node, node_health=NULL, MAX_NODES=0, t
   filtered_df$id <- paste(filtered_df$TagId, filtered_df$freq, filtered_df$NodeId)
   filtered_df <- filtered_df[order(filtered_df$id, -filtered_df$TagRSSI_mean, -filtered_df$beep_count),]
   filtered_df <- filtered_df[!duplicated(filtered_df$id),]
-  filtered_df <- filtered_df[filtered_df$TagRSSI_mean > -100,]
+  if (minRSSI < 0) {filtered_df <- filtered_df[filtered_df$TagRSSI_mean > minRSSI,]}
   filtered_df$weight <- (filtered_df$beep_count)/(filtered_df$TagRSSI_mean)
   filtered_df$num_x <- filtered_df$node_x*filtered_df$weight
   filtered_df$num_y <- filtered_df$node_y*filtered_df$weight
