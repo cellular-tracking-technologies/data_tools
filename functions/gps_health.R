@@ -72,9 +72,19 @@ gps_channel_plots <- function(health, freq, ids, lat=NULL, lon=NULL) { #freq,
       geom_line(data = ea, aes(x = GPS_YYYY.MM.DD_HH.MM.SS, y = temperature, group=1), colour="red") +
       scale_x_datetime(date_labels="%b %d", limits=c(min(minx), max(maxx)))
     
+    p4 = pbase + 
+      theme(axis.text=element_text(size=10),
+            axis.title=element_text(size=30,face="bold")) +
+      #scaled: geom_point(data = ea, aes(x = Time, y = rssi, group=1)) +
+      #geom_point(data = ea, aes(x = Time, y = RSSI, group=1)) +
+      #scaled: geom_hline(yintercept = threshold) +
+      #geom_hline(yintercept = -95) +
+      geom_line(data = ea, aes(x = GPS_YYYY.MM.DD_HH.MM.SS, y = activity, group=1), colour="purple") +
+      scale_x_datetime(date_labels="%b %d", limits=c(min(minx), max(maxx)))
+    
     #check-ins as scaled line overlay
     
-    return(list(batt = p, current = p1, solarv = p2, temp = p3))})
+    return(list(batt = p, current = p1, solarv = p2, temp = p3, act = p4))})
 names(outplots) <- ids
 return(outplots)}
 
