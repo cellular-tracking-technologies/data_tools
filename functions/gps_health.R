@@ -90,23 +90,24 @@ export_gps_channel_plots <- function(plotlist=NULL,out_path=getwd(),whichplots =
   for (i in 1:length(filenames)) {
     file_name = paste(out_path,"node_",filenames[i],".png", sep="")
     print(file_name)
-    png(file_name, width=1800, height=1000)
+    #png(file_name, width=1800, height=1000)
     myplots <- outplot[[i]][whichplots]
     formatted <- lapply(myplots[1:length(myplots)-1], function(y) y + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), 
-                                                      axis.text=element_text(size=15),
-                                                      axis.title=element_text(size=30,face="bold"))
-    )
-    
-    formatted2 <- lapply(myplots[length(myplots)], function(y) y + xlab("Time") + theme(axis.text=element_text(size=15),
+                                                                            axis.text=element_text(size=15),
                                                                             axis.title=element_text(size=30,face="bold"))
     )
     
+    formatted2 <- lapply(myplots[length(myplots)], function(y) y + xlab("Time") + theme(axis.text=element_text(size=15),
+                                                                                        axis.title=element_text(size=30,face="bold"))
+    )
+    
     #last <- myplots[length(myplots)] + theme(axis.text=element_text(size=15),axis.title=element_text(size=30,face="bold"))
-
+    
     myplots <- c(formatted,  formatted2)
     #+ theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=15),
     #                                               axis.title=element_text(size=30,face="bold"))
     #+ theme(axis.title=element_text(size=30,face="bold"), axis.text=element_text(size=15))
-  ggarrange(plots=myplots, nrow=length(myplots))
-  dev.off()
-}}
+    ggarrange(plotlist=myplots, nrow=length(myplots)) %>% ggexport(filename = file_name, width=1800, height=1000)
+    #dev.off()
+  }
+}
