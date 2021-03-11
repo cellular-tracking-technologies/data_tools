@@ -38,7 +38,7 @@ gps_channel_plots <- function(health, freq, ids, lat=NULL, lon=NULL) { #freq,
       geom_segment(aes(x = x1, y = y1, xend = x2, yend = y2, colour=col), data=batt) + #size=2
       scale_color_manual(values = c("(0,3.7]" = "#FF0000","(3.7,4]" = "#F5B041","(4,Inf]" = "#00FF00")) +
       scale_x_datetime(date_labels="%b %d", limits=c(min(minx), max(maxx))) +
-      scale_y_continuous(name="Batt", limits=c(2,5))
+      scale_y_continuous(name="Batt", limits=c(2,5)) + theme(legend.position = "none")
     
     #RSSI scatter plot, A&V lines commented out    
     p1 = pbase + 
