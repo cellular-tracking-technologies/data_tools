@@ -340,7 +340,7 @@ gps_plots <- function(gps, freq) {
     geom_bar(stat="identity")
 return(p1)}
 
-export_node_channel_plots <- function(plotlist=NULL,health,freq="1 hour",out_path=getwd(),x=3,y=2,z=1) {
+export_node_channel_plots <- function(plotlist=NULL,health,freq="1 hour",out_path=getwd(),whichplots = c(3,2,1)) {
   if (is.null(plotlist)) {
     plotdf <- summarize_health_data(health, freq)
     plotdf <- plotdf[[1]]
@@ -353,13 +353,23 @@ export_node_channel_plots <- function(plotlist=NULL,health,freq="1 hour",out_pat
     file_name = paste(out_path,"node_",filenames[i],".png", sep="")
     print(file_name)
     png(file_name, width=1800, height=1000)
-    myplots <- outplot[[i]][c(x,y,z)]
-    first2 <- myplots[1:(length(myplots)-1)]
-    formatted <- lapply(first2, function(y) y + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), 
+    myplots <- outplot[[i]][whichplots]
+    formatted <- lapply(myplots[1:length(myplots)-1], function(y) y + theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), 
                                                                             axis.text=element_text(size=15),
                                                                             axis.title=element_text(size=30,face="bold"))
-                        )
-    myplots <- c(formatted, myplots[length(myplots)])
+    )
+    
+    formatted2 <- lapply(myplots[length(myplots)], function(y) y + xlab("Time") + theme(axis.text=element_text(size=15),
+                                                                                        axis.title=element_text(size=30,face="bold"))
+    )
+    
+    #last <- myplots[length(myplots)] + theme(axis.text=element_text(size=15),axis.title=element_text(size=30,face="bold"))
+    
+    myplots <- c(formatted,  formatted2)
+    #+ theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=15),
+    #                                               axis.title=element_text(size=30,face="bold"))
+    #+ theme(axis.title=element_text(size=30,face="bold"), axis.text=element_text(size=15))
+
 #+ theme(axis.title.x=element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text=element_text(size=15),
 #                                               axis.title=element_text(size=30,face="bold"))
 #+ theme(axis.title=element_text(size=30,face="bold"), axis.text=element_text(size=15))
