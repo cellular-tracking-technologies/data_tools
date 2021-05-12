@@ -1,3 +1,26 @@
+## ---------------------------
+##
+## Script name: localization.R
+##
+## Purpose of script: produce location estimates
+##
+## Author: Dr. Jessica Gorzo and Dr. Kristina Paxton
+##
+## Date Created: 2020-07-13
+##
+## Email: jessica.gorzo@celltracktech.com
+##
+## ---------------------------
+##
+## Notes: 
+##
+## ---------------------------
+
+options(scipen = 6, digits = 9) # I prefer to view outputs in non-scientific notation
+
+## ---------------------------
+
+
 list.of.packages <- c("sp", "dplyr", "padr", "rgdal", "raster", "sf")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
