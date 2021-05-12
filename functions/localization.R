@@ -283,3 +283,103 @@ export_node <- function(health, out_path) {
   nodehealth <- node_file(health)
   write.csv(nodehealth,file=paste0(outpath,"node_loc.csv"))
 }
+
+nodes_spatial <- function(nodes) {
+  nodes$NodeId <- toupper(nodes$NodeId)
+  nodespatial <- nodes
+  coordinates(nodespatial) <- ~lng+lat
+  crs(nodespatial) <- CRS("+proj=longlat +datum=WGS84")  
+  return(nodespatial)}
+
+calibrate <- function(beep_data, calibration, nodes, calibrate = TRUE, freq = "3 min", max_nodes = 0) {
+  beep_data <- beep_data[beep_data$TagId %in% calibration$TagId,]
+  dt1 <- data.table(beep_data, start=beep_data$Time, end=beep_data$Time)
+  dt2 <- data.table(calibration)
+  setkey(dt2, TagId, start, end)
+  indx <- foverlaps(dt1, dt2, type='within')
+  beep_data <- indx[!is.na(indx$start),]
+  if(isTRUE(calibrate)) {
+    test <- advanced_resampled_stats(beep_data, nodes, freq = freq, keep_cols = c("TagLat", "TagLng", "pt"), calibrate = "session_id")
+  } else {
+    test <- advanced_resampled_stats(beep_data, nodes, freq = freq, keep_cols = c("TagLat", "TagLng", "pt"))
+  }
+  test$id <- paste(test$TagId, test$freq, test$NodeId)
+  test <- test[order(test$id, -test$TagRSSI_mean, -test$beep_count),]
+  test <- test[!duplicated(test$id),]
+  test$groups <- paste(test$TagId, test$freq)
+  alltags <- test[!duplicated(test$groups),]
+  pts <- test[!duplicated(test$pt_min),]
+  
+  tag_loc <- alltags
+  coordinates(tag_loc) <- ~TagLng_min+TagLat_min
+  crs(tag_loc) <- CRS("+proj=longlat +datum=WGS84") 
+  
+  nodespatial <- nodes_spatial(nodes)
+  
+  dst <- raster::pointDistance(tag_loc, nodespatial, lonlat = T, allpairs = T)
+  dist_df <- data.frame(dst, row.names = tag_loc$groups)
+  colnames(dist_df) <- nodespatial$NodeId
+  dist_df$Test.Group <- rownames(dist_df)
+  
+  dist.gather <- dist_df %>%
+    tidyr::gather(key = "NodeId", value = "distance", -Test.Group)
+  dist.gather$id <- paste(dist.gather$Test.Group, dist.gather$NodeId)
+  test$distance <- dist.gather$distance[match(test$id, dist.gather$id)]
+  exp.mod <- nls(TagRSSI_mean ~ SSasymp(distance, Asym, R0, lrc), data = test)
+  
+  a <- coef(exp.mod)[["R0"]]
+  S <- exp(coef(exp.mod)[["lrc"]])
+  K <- coef(exp.mod)[["Asym"]]
+  
+  all_data <- data.frame(TagId = test$TagId, NodeId = test$NodeId, long = test$node_lng_min, lat = test$node_lat_min, avg.RSSI = test$TagRSSI_mean, Test.Group = paste(test$TagId, test$freq))
+  return(list(all_data, a, S, K))}
+
+triangulate <- function(all_data, rssi = -100, node = 3, distance = relation) {
+  test.g90.dat <- all_data[all_data$avg.RSSI > rssi,]
+  sample.size <- test.g90.dat %>%
+    dplyr::group_by(Test.Group) %>%
+    dplyr::summarise(n.nodes = n()) %>%
+    dplyr::filter(n.nodes < node)
+  test.red.dat <- test.g90.dat[!test.g90.dat$Test.Group %in% sample.size$Test.Group,]
+  #K = -100.8424
+  #a = -63.06914
+  #S = 0.009777435
+  x <- test.red.dat$avg.RSSI
+  test.red.dat$dist.est <- eval(parse(text=distance))
+  #changed sign on S despite relationship in Paxton's original script
+  estimated.location_results <- data.frame(Test.Group=character(), long.est=numeric(), lat.est=numeric(), est.error =numeric())
+  tests = unique(test.red.dat$Test.Group)
+  for(j in 1:length(tests)) {
+    
+    # Isolate the test 
+    sub.test <- test.red.dat %>% dplyr::filter(Test.Group == tests[j]) 
+    
+    # Determine the node with the strongest avg.RSSI value to be used as starting values
+    max.RSSI <- sub.test[which.max(sub.test$avg.RSSI),]
+    print(j)
+    # Non-linear test to optimize the location of unknown signal by looking at the radius around each Node based on RSSI values (distance) and the pairwise distance between all nodes
+    nls.test <- nls(dist.est ~ geosphere::distm(data.frame(long, lat), c(lng_solution, lat_solution), fun=distHaversine), # distm - matrix of pairwise distances between lat/longs
+                    data = sub.test, start=list(lng_solution=max.RSSI$long, lat_solution=max.RSSI$lat), # used long/lat of NodeId with largest RSSI identified in max.RSSI
+                    control=nls.control(warnOnly = T, minFactor=1/30000)) # gives a warning, but doesn't stop the test from providing an estimate based on the last iteration before the warning
+    
+    # Determine error around the point location estimate
+    c <- car::confidenceEllipse(nls.test, levels=0.95) 
+    ellipse_line <- c[1, ] # isolating one point on the line 
+    ellipse_line <- rbind(ellipse_line, coef(nls.test)) # bringing together the one isolated point on the line and the estimated point - coef(nls.test)
+    est.error <-(distm(ellipse_line[1,], ellipse_line[2,]))
+    
+    # estimated location of the test and error
+    estimated.loc <- data.frame(Test.Group = tests[j], long.est = ellipse_line[2,1], lat.est = ellipse_line[2,2], est.error = est.error)
+    
+    # Populate dataframe with results
+    estimated.location_results <- rbind(estimated.location_results, estimated.loc)
+    
+  }
+  
+  estimated.location_results$session_id <- sapply(strsplit(as.character(estimated.location_results$Test.Group), " "), "[[", 2)
+  return(estimated.location_results)}
+
+relate <- function(a, S, K) {
+  form <- paste0("abs(log((x - ",K,")/abs(",a,"))/",S,")")
+  print(form)
+  return(form)}

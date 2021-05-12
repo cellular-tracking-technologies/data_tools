@@ -44,9 +44,25 @@ resampled <- advanced_resampled_stats(beeps = beep_data, node = nodes, freq = fr
 p3 = ggplot(data=resampled, aes(x=freq, y=TagRSSI_max, group=NodeId, colour=NodeId)) +
   geom_line()
 
+##### LOCATION METHODS########
+###Example 1: Weighted Average###
 locations <- weighted_average(freq[1], beep_data, nodes, all_data[[2]][[1]], 0, tag_id)
 #multi_freq <- lapply(freq, weighted_average, beeps=beep_data, node=nodes) 
 #export_locs(freq, beep_data, nodes, tag_id, outpath)
+######################
+
+###Example 2: Triangulation###
+#calibration data frame needs column names: pt, session_id, start, end, TagId, TagLat, TagLng
+#start and end need to be in UTC
+calibration <- read.csv("your file")
+calibration$start <- as.POSIXct(tags$start, tz="UTC")
+calibration $end <- as.POSIXct(tags$end, tz="UTC")
+calibrated <- calibrate(beep_data, calibration, nodes, calibrate = TRUE)
+all_data <- calibrated[[1]]
+relation <- relate(calibrated[[2]], calibrated[[3]], calibrated[[4]])
+out <- triangulate(all_data, distance = relation)
+##############################
+
 
 n <- 2 #this is an example of filtering out locations based on a minimum number of nodes
 locations <- locations[locations$unique_nodes > n,]
