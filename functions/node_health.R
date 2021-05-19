@@ -338,7 +338,7 @@ gps_plots <- function(gps, freq) {
   
   p2 <- ggplot(data=aql, aes(x=cut, y=value, fill=variable)) +
     geom_bar(stat="identity")
-return(p1)}
+return(list(p1,p2))}
 
 export_node_channel_plots <- function(plotlist=NULL,health,freq="1 hour",out_path=getwd(),whichplots = c(3,2,1)) {
   if (is.null(plotlist)) {

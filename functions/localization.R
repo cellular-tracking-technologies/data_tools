@@ -406,3 +406,18 @@ relate <- function(a, S, K) {
   form <- paste0("abs(log((x - ",K,")/abs(",a,"))/",S,")")
   print(form)
   return(form)}
+
+
+loc_prep <- function(beep_data, nodes, freq) {
+  test <- advanced_resampled_stats(beep_data, nodes)
+  #test$pt <- test$pt_min
+  
+  test$id <- paste(test$TagId, test$freq, test$NodeId)
+  test <- test[order(test$id, -test$TagRSSI_mean, -test$beep_count),]
+  test <- test[!duplicated(test$id),]
+  #pt3 <- test[test$pt==10,]
+  
+  test$groups <- paste(test$TagId, test$freq)
+  
+  all_data <- data.frame(TagId = test$TagId, NodeId = test$NodeId, long = test$node_lng_min, lat = test$node_lat_min, avg.RSSI = test$TagRSSI_mean, Test.Group = paste(test$TagId, test$freq))
+  return(all_data)}

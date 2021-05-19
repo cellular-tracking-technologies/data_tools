@@ -26,10 +26,10 @@ source("functions/node_health.R")
 #It can contain any/all of your downloaded data files, just don't manipulate/add your own unrelated/altered files.
 #Unzip any zipped directories therein, but compressed csv files (csv.gz) don't need to be unzipped
 
-infile <- "../data/ABS_TagTest1"
+infile <- "~/Documents/data/ABS_TagTest1"
 
 #This is where you want your output to go
-outpath <- "../plots/"
+outpath <- "~/Documents/plots/"
 
 freq <- "1 hour" #interval to summarize node health indicators of interest
 
@@ -103,7 +103,7 @@ batt_mod <- lapply(radionode_plots, function(x) {
 ## if you want to write out plot images...
 #call the function "export_node_channel_plots(health,outpath,x,y,z)" replacing x, y, z with the integer index of the plot desired for each of the 3 panels
 #the resulting plots will be in "outpath" named "node_<RadioId>_<NodeId>.png"
-export_node_channel_plots(health=health_data,freq=freq,out_path=outpath,x=4,y=2,z=1)
+export_node_channel_plots(health=health_data,freq=freq,out_path=outpath,whichplots = c(4,2,1))
 
 ###FOR V2 STATIONS ONLY
 health_df <- health_data[[1]]
