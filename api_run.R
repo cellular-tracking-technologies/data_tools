@@ -1,7 +1,7 @@
 source("functions/api_postgres.R")
 start <- Sys.time()
 
-####ARCHBOLD####
+####SETTINGS####
 outpath <- "this is the path to the folder that will contain your downloaded files" 
 my_token <- "your token"
 db_name <- "your database name"
