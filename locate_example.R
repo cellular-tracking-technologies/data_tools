@@ -8,10 +8,10 @@ source("functions/data_manager.R")
 source("functions/localization.R")
 
 ###EDIT THESE VALUES
-infile <- "../data/indigo"
+infile <- "~/Documents/data/ABS_TagTest1"
 outpath <- "../output/"
 
-tags <- read.csv("../data/indigo/snake_tags.csv", as.is=TRUE, na.strings=c("NA", "")) #uppercase node letters
+tags <- read.csv("../data/ABS_TagTest1/tags-to-analyze.csv", as.is=TRUE, na.strings=c("NA", "")) #uppercase node letters
 
 all_data <- load_data(infile)
 beep_data <- all_data[[1]][[1]]
@@ -55,8 +55,8 @@ locations <- weighted_average(freq[1], beep_data, nodes, all_data[[2]][[1]], 0, 
 #calibration data frame needs column names: pt, session_id, start, end, TagId, TagLat, TagLng
 #start and end need to be in UTC
 calibration <- read.csv("your file")
-calibration$start <- as.POSIXct(tags$start, tz="UTC")
-calibration $end <- as.POSIXct(tags$end, tz="UTC")
+calibration$start <- as.POSIXct(calibration$start, tz="UTC")
+calibration $end <- as.POSIXct(calibration$end, tz="UTC")
 calibrated <- calibrate(beep_data, calibration, nodes, calibrate = TRUE)
 all_data <- calibrated[[1]]
 relation <- relate(calibrated[[2]], calibrated[[3]], calibrated[[4]])
