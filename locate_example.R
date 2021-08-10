@@ -46,7 +46,7 @@ p3 = ggplot(data=resampled, aes(x=freq, y=TagRSSI_max, group=NodeId, colour=Node
 
 ##### LOCATION METHODS########
 ###Example 1: Weighted Average###
-locations <- weighted_average(freq[1], beep_data, nodes, all_data[[2]][[1]], 0, tag_id)
+locations <- weighted_average(freq[1], beep_data, nodes, MAX_NODES=0, tag_id=tag_id) #all_data[[2]][[1]], 
 #multi_freq <- lapply(freq, weighted_average, beeps=beep_data, node=nodes) 
 #export_locs(freq, beep_data, nodes, tag_id, outpath)
 ######################
