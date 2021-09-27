@@ -172,10 +172,10 @@ sapply(projects, function(a) {
   mystations <- unname(mystations)
   print(mystations)
   
-  insertnew <- dbSendQuery(conn, paste("INSERT INTO ","station (station_id)"," VALUES ($1)
-                                       ON CONFLICT DO NOTHING",sep=""))
-  dbBind(insertnew, params=MYSTATIONS)
-  dbClearResult(insertnew)
+  #insertnew <- dbSendQuery(conn, paste("INSERT INTO ","station (station_id)"," VALUES ($1)
+  #                                     ON CONFLICT DO NOTHING",sep=""))
+  #dbBind(insertnew, params=MYSTATIONS)
+  #dbClearResult(insertnew)
   
   vars <- paste(dbListFields(conn, "ctt_project_station"), sep="", collapse=",")
   print(vars)
