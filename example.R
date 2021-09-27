@@ -26,10 +26,10 @@ source("functions/node_health.R")
 #It can contain any/all of your downloaded data files, just don't manipulate/add your own unrelated/altered files.
 #Unzip any zipped directories therein, but compressed csv files (csv.gz) don't need to be unzipped
 
-infile <- "~/Documents/data/ABS_TagTest1"
+infile <- "~/Documents/data/meadows/Meadows V2"
 
 #This is where you want your output to go
-outpath <- "~/Documents/plots/"
+outpath <- "~/Documents/plots/meadows"
 
 freq <- "1 hour" #interval to summarize node health indicators of interest
 
@@ -45,18 +45,23 @@ tides = FALSE
 
 #EXAMPLE POSSIBLE VALUES
 #tags <- c("61526633")
-start_time = as.POSIXct("2020-09-29 01:00:00", tz = "America/New_York")
-end_time = as.POSIXct("2020-09-10 15:00:00", tz = "America/New_York")
+#start_time = as.POSIXct("2021-05-16 01:00:00", tz = "America/New_York")
+#end_time = as.POSIXct("2020-06-03 23:00:00", tz = "America/New_York")
 
 all_data <- load_data(infile) #start_time, end_time, tags
 #set arguments if you choose to subset by date or tags
 ####################################################################################
 
 beep_data <- all_data[[1]]
+beep_data <- all_data[[1]][[1]]
+subset_data <- beep_data[beep_data$Time > as.POSIXct("2021-05-15") & beep_data$Time < as.POSIXct("2021-06-04"),]
+my_tag <- beep_data[beep_data$TagId == "your tag ID",]
+my_tags <- beep_data[beep_data$TagId %in% c("your tag IDs"),]
 #beep_data <- beep_data[complete.cases(beep_data), ]
 
 health_data <- all_data[[2]]
 #health_data now has a data frame of all of your node health files. 
+#subset_data <- health_data[health_data$Time > as.POSIXct("2021-08-12") & health_data$Time < as.POSIXct("2021-08-20"),]
 
 gps_data <- all_data[[3]]
 
@@ -107,10 +112,11 @@ export_node_channel_plots(health=health_data,freq=freq,out_path=outpath,whichplo
 
 ###FOR V2 STATIONS ONLY
 health_df <- health_data[[1]]
+health_df <- health_df[health_df$Time > as.POSIXct("2021-08-12") & health_df$Time < as.POSIXct("2021-08-20"),]
 nodes <- unique(health_df$NodeId)
 #produces a list of plots per node showing if/when time stamp on sending vs. receiving mismatches occur, and if there are NA values
 #you can index the list by the vector of nodes passed to it
-mynodes <- node_plots(health_data,nodes,freq)
+mynodes <- node_plots(health_data,nodes,freq, start = as.POSIXct("2021-08-12"))
 #90649225 is min time diff to get to 2017
 #for instance mynodes[[1]] corresponds to the plots for nodes[1]
 
@@ -120,4 +126,4 @@ mynodes <- node_plots(health_data,nodes,freq)
 
 #call the export_node_plots() function to output the plots looking for time stamp mismatches
 #the resulting plots will be in "outpath" named "nodes_<node>.png"
-export_node_plots(health=health_data,freq=freq,out_path=outpath, x=5,y=4,z=1)
+export_node_plots(health=health_data,freq=freq,out_path=outpath, x=5,y=2,z=1, start = as.POSIXct("2021-08-12"))
