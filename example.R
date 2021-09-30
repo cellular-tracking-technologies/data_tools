@@ -116,7 +116,8 @@ health_df <- health_df[health_df$Time > as.POSIXct("2021-08-12") & health_df$Tim
 nodes <- unique(health_df$NodeId)
 #produces a list of plots per node showing if/when time stamp on sending vs. receiving mismatches occur, and if there are NA values
 #you can index the list by the vector of nodes passed to it
-mynodes <- node_plots(health_data,nodes,freq, start = as.POSIXct("2021-08-12"))
+mynodes <- node_plots(health_data,nodes,freq)
+#mynodes[1]$`3274F4`[[1]]
 #90649225 is min time diff to get to 2017
 #for instance mynodes[[1]] corresponds to the plots for nodes[1]
 

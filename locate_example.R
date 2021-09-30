@@ -56,7 +56,7 @@ locations <- weighted_average(freq[1], beep_data, nodes, MAX_NODES=0, tag_id=tag
 #start and end need to be in UTC
 calibration <- read.csv("your file")
 calibration$start <- as.POSIXct(calibration$start, tz="UTC")
-calibration $end <- as.POSIXct(calibration$end, tz="UTC")
+calibration$end <- as.POSIXct(calibration$end, tz="UTC")
 calibrated <- calibrate(beep_data, calibration, nodes, calibrate = TRUE)
 all_data <- calibrated[[1]]
 relation <- relate(calibrated[[2]], calibrated[[3]], calibrated[[4]])
@@ -96,6 +96,6 @@ my_nodes <- st_as_sf(nodes_spatial)
 ggplot() + 
   #geom_point(data=my_locs, aes(x=long,y=lat))
   #  ggmap(ph_basemap) +
-  #geom_sf(data = locs, aes(colour=TagId), inherit.aes = FALSE) + 
+  geom_sf(data = locs, aes(colour=TagId), inherit.aes = FALSE) + 
   geom_sf(data = my_nodes) +
   geom_text(data = nodes, aes(x=lng, y=lat, label = NodeId), size = 5)
