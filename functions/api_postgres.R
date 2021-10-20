@@ -370,12 +370,12 @@ get_data <- function(project, outpath, f=NULL) {
 failed <- Map(get_files, ids, file_names)
 return(failed)}
 
-get_my_data <- function(my_token, outpath, db_name=NULL, project=NULL) {
+get_my_data <- function(my_token, outpath, db_name=NULL, myproject=NULL) {
   projects <- content(POST(host, path = project, body = list(token=my_token), encode="json", verbose()), "parsed")
   projects <- projects[['projects']]
   #print(projects)
-  if(!is.null(project)) {
-    projects <- projects[[which(sapply(projects, function(x) x[["name"]]) == project)]]
+  if(!is.null(myproject)) {
+    projects <- projects[[which(sapply(projects, function(x) x[["name"]]) == myproject)]]
   }
   if(!is.null(db_name)) {
     create_db(db_name, projects)
