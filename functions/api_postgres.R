@@ -145,45 +145,45 @@ dbExecute(conn, "CREATE TABLE IF NOT EXISTS gps
     PRIMARY KEY (gps_at, station_id)
   )")
 
-sapply(projects, function(a) {
-  b <- unname(as.data.frame(a))
-  vars <- paste(dbListFields(conn, "ctt_project"), sep="", collapse=",")
-  insertnew <- dbSendQuery(conn, paste("INSERT INTO ","ctt_project"," (",vars,") VALUES ($2, $1) ON CONFLICT DO NOTHING",sep="")) 
+  sapply(projects, function(a) {
+    b <- unname(as.data.frame(a))
+    vars <- paste(dbListFields(conn, "ctt_project"), sep="", collapse=",")
+    insertnew <- dbSendQuery(conn, paste("INSERT INTO ","ctt_project"," (",vars,") VALUES ($2, $1) ON CONFLICT DO NOTHING",sep="")) 
   #it is possible you should be using dbSendStatement for all of these
-  dbBind(insertnew, params=b)
-  dbClearResult(insertnew)
+    dbBind(insertnew, params=b)
+    dbClearResult(insertnew)
   
-  basename <- a$name
-  id <- a[['id']]
-  my_stations <- getStations(project_id=id)
+    basename <- a$name
+    id <- a[['id']]
+    my_stations <- getStations(project_id=id)
   
-  mystations <- lapply(my_stations$stations, function(c) {
-    c <- as.data.frame(t(unlist(c)), stringsAsFactors=FALSE)
+    mystations <- lapply(my_stations$stations, function(c) {
+      c <- as.data.frame(t(unlist(c)), stringsAsFactors=FALSE)
     
-    c$project_id <- id
-    colnames(c)[colnames(c)=="station.db-id"] <- "db_id"
-    colnames(c)[colnames(c)=="station.id"] <- "station_id"
-    colnames(c)[colnames(c)=="deploy-at"] <- "deploy_at"
-    if (is.null(c$`end-at`)) {
-      c$end_at <- NA} else {colnames(c)[colnames(c)=="end-at"] <- "end_at"}
-    return(c)})
-  mystations <- as.data.frame(rbindlist(mystations, fill=TRUE))
-  MYSTATIONS <- list(unique(mystations$station_id))
-  mystations <- unname(mystations)
-  print(mystations)
+      c$project_id <- id
+      colnames(c)[colnames(c)=="station.db-id"] <- "db_id"
+      colnames(c)[colnames(c)=="station.id"] <- "station_id"
+      colnames(c)[colnames(c)=="deploy-at"] <- "deploy_at"
+      if (is.null(c$`end-at`)) {
+        c$end_at <- NA} else {colnames(c)[colnames(c)=="end-at"] <- "end_at"}
+      return(c)})
+    mystations <- as.data.frame(rbindlist(mystations, fill=TRUE))
+    MYSTATIONS <- list(unique(mystations$station_id))
+    mystations <- unname(mystations)
+    print(mystations)
   
   #insertnew <- dbSendQuery(conn, paste("INSERT INTO ","station (station_id)"," VALUES ($1)
   #                                     ON CONFLICT DO NOTHING",sep=""))
   #dbBind(insertnew, params=MYSTATIONS)
   #dbClearResult(insertnew)
   
-  vars <- paste(dbListFields(conn, "ctt_project_station"), sep="", collapse=",")
-  print(vars)
-  insertnew <- dbSendQuery(conn, paste("INSERT INTO ","ctt_project_station"," (",vars,") VALUES ($1, $4, $2, $3, $5)
+    vars <- paste(dbListFields(conn, "ctt_project_station"), sep="", collapse=",")
+    print(vars)
+    insertnew <- dbSendQuery(conn, paste("INSERT INTO ","ctt_project_station"," (",vars,") VALUES ($1, $4, $2, $3, $5)
                                        ON CONFLICT DO NOTHING",sep=""))
-  dbBind(insertnew, params=mystations)
-  dbClearResult(insertnew)
-})
+    dbBind(insertnew, params=mystations)
+    dbClearResult(insertnew)
+  })
 }
 
 timeset <- function(g) {unname(sapply(g, function(h) ifelse(is.na(h), NA, paste(as.character(h), "UTC"))))}
@@ -370,9 +370,13 @@ get_data <- function(project, outpath, f=NULL) {
 failed <- Map(get_files, ids, file_names)
 return(failed)}
 
-get_my_data <- function(my_token, outpath, db_name=NULL) {
+get_my_data <- function(my_token, outpath, db_name=NULL, project=NULL) {
   projects <- content(POST(host, path = project, body = list(token=my_token), encode="json", verbose()), "parsed")
   projects <- projects[['projects']]
+  #print(projects)
+  if(!is.null(project)) {
+    projects <- projects[[which(sapply(projects, function(x) x[["name"]]) == project)]]
+  }
   if(!is.null(db_name)) {
     create_db(db_name, projects)
     failed <- lapply(projects, get_data, f=db_name, outpath=outpath)
