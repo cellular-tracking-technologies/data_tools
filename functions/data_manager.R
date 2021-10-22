@@ -27,7 +27,7 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
     time_cols <- c("Time", "RecordedAt", "recorded.at", "gps.at")
     listdf <- lapply(x, function(i) { #cols=NULL
       print(paste("merging file:", i))
-      indx <- count.fields(i, sep=",")
+      indx <- count.fields(i, sep=",") #does this need to happen before the file read in?
       df <- tryCatch({
       if (file.size(i) > 0) {
         read.csv(i,as.is=TRUE, na.strings=c("NA", ""), header=TRUE, skipNul = TRUE, colClasses=c("NodeId"="character","TagId"="character"))
@@ -40,25 +40,25 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
         v <- ifelse(any(grepl("T",df[,1])), 1, 2)
         if (!is.null(z)) {v <- z}
         print(v)
-        if (y=="beep" & v < 2) {
-          correct <- 5
-          df <- df[which(indx == correct),]
-        } else if (y == "beep" & v > 1) {
-          correct <- 6
-          df <- df[which(indx == correct | indx == 5),]
-        } else if (y=="node" & v < 2) {
-          correct <- 6
-          df <- df[which(indx == correct),]
-        } else if (y=="node" & v > 1) {
-          correct <- 13
-          df <- df[which(indx == correct),]
-        } else if (y=="gps" & v < 2) {
-          correct <- 6
-          df <- df[which(indx == correct | indx == 9),]
-        } else {
-          correct <- 9
-          df <- df[which(indx == correct | indx == 6),]
-        }
+        #if (y=="beep" & v < 2) {
+        #  correct <- 5
+        #  df <- df[which(indx == correct),]
+        #} else if (y == "beep" & v > 1) {
+        #  correct <- 6
+        #  df <- df[which(indx == correct | indx == 5),]
+        #} else if (y=="node" & v < 2) {
+        #  correct <- 6
+        #  df <- df[which(indx == correct),]
+        #} else if (y=="node" & v > 1) {
+        #  correct <- 13
+        #  df <- df[which(indx == correct),]
+        #} else if (y=="gps" & v < 2) {
+        #  correct <- 6
+        #  df <- df[which(indx == correct | indx == 9),]
+        #} else {
+        #  correct <- 9
+        #  df <- df[which(indx == correct | indx == 6),]
+        #}
         
         if(any(row.names(df) == "NA")) {df <- df[-which(row.names(df)=="NA"),]}
         df <- df[,colnames(df) %in% known]
@@ -114,9 +114,11 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
           print(paste("error merging file:",i, err))
         })
       
-      if(exists("v")) {
-        df$v <- v
-      } else {v <- NULL}
+      if(!exists("v")) {
+        v <- NULL
+      }
+      
+      #MAY HAVE TO ADD v BACK IN TO DATA FRAME
 
     #df <- df[which(ncol(df) == correctn),] how to check to see if number of fields in each row is the same?
     #else {df <- NULL}
