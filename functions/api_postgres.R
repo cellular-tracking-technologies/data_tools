@@ -314,19 +314,22 @@ get_data <- function(project, outpath, f=NULL) {
       station_id = station[["station"]][["id"]],
       begin = as.POSIXct(station[['deploy-at']],format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)
     )
-  
     if(!is.null(station[['end-at']])) {
       kwargs[['end']] = as.POSIXct(station[['end-at']],format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)
     }
+    #print("getting station file list...")
     file_info <- do.call(getStationFileList, kwargs)
     outfiles <- file_info[['files']]
+    #print(outfiles)
+    #print(paste(length(outfiles), "files available"))
   return(outfiles)})
-  
+  print("getting files available for those stations...")
   filenames <- unname(rapply(files_avail, grep, pattern = "CTT", value=TRUE))
   files_to <- filenames[!filenames %in% files_loc]
 
   allfiles <- rapply(files_avail, function(z) z %in% files_to, how = "unlist")
   ids <- unlist(files_avail)[which(allfiles) - 1]
+  print(paste("about to get", length(ids), "files"))
   file_names <- unlist(files_avail)[which(allfiles)]
 
   get_files <- function(x, y) {
@@ -337,7 +340,7 @@ get_data <- function(project, outpath, f=NULL) {
     fileinfo <- splitfile[2]
     sensorid <- unlist(strsplit(fileinfo,"-"))
     sensor <- sensorid[1]
-    faul <- which(sapply(my_stations[["stations"]], function(x) x$station$id==sensor)) 
+    faul <- which(sapply(my_stations[["stations"]], function(sta) sta$station$id==sensor)) 
     begin <- as.POSIXct(my_stations[["stations"]][[faul]]$`deploy-at`,format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE) 
     filenameinfo <- sensorid[2]
     file_info <- unlist(strsplit(filenameinfo, "\\."))[1]
@@ -375,7 +378,7 @@ get_my_data <- function(my_token, outpath, db_name=NULL, myproject=NULL) {
   projects <- projects[['projects']]
   #print(projects)
   if(!is.null(myproject)) {
-    projects <- projects[[which(sapply(projects, function(x) x[["name"]]) == myproject)]]
+    projects <- list(projects[[which(sapply(projects, function(x) x[["name"]]) == myproject)]])
   }
   if(!is.null(db_name)) {
     create_db(db_name, projects)
