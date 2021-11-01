@@ -2,15 +2,16 @@ source("functions/api_postgres.R")
 start <- Sys.time()
 
 ####SETTINGS####
-outpath <- "this is the path to the folder that will contain your downloaded files" 
-my_token <- "your token"
-db_name <- "your database name"
+outpath <- "~/Documents/data/radio_projects/myproject" 
+my_token <- "your token here"
+db_name <- "mydb"
+myproject <- "CTT Project Name"
 conn <- dbConnect(RPostgres::Postgres(), dbname=db_name)
 ################
 
-get_my_data(my_token, outpath, conn)
+get_my_data(my_token, outpath, conn, myproject)
 
-update_db(conn, outpath)
+update_db(conn, outpath, myproject)
 dbDisconnect(conn)
 
 time_elapse <- Sys.time() - start

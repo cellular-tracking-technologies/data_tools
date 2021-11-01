@@ -409,8 +409,8 @@ pop <- function(x) { #this was a function written before the data file table was
   dbClearResult(insertnew)
 }
 
-update_db <- function(d, outpath) {
-  myfiles <- list.files(outpath, recursive = TRUE)
+update_db <- function(d, outpath, myproject) {
+  myfiles <- list.files(paste(outpath, myproject,sep="/"), recursive = TRUE)
   files_loc <- sapply(strsplit(myfiles, "/"), tail, n=1)
   allnode <- dbReadTable(d, "data_file")
   files_import <- myfiles[which(!files_loc %in% allnode$path)]
