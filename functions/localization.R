@@ -409,7 +409,7 @@ relate <- function(a, S, K) {
 
 
 loc_prep <- function(beep_data, nodes, freq) {
-  test <- advanced_resampled_stats(beep_data, nodes)
+  test <- advanced_resampled_stats(beep_data, nodes, freq=freq)
   #test$pt <- test$pt_min
   
   test$id <- paste(test$TagId, test$freq, test$NodeId)
