@@ -27,7 +27,7 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
     time_cols <- c("Time", "RecordedAt", "recorded.at", "gps.at")
     listdf <- lapply(x, function(i) { #cols=NULL
       print(paste("merging file:", i))
-      indx <- count.fields(i, sep=",") #does this need to happen before the file read in?
+      indx <- count.fields(i, sep=",")
       df <- tryCatch({
       if (file.size(i) > 0) {
         read.csv(i,as.is=TRUE, na.strings=c("NA", ""), header=TRUE, skipNul = TRUE, colClasses=c("NodeId"="character","TagId"="character"))
@@ -35,34 +35,34 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
         # error handler picks up where error was generated, in Bob's script it breaks if header is missing
         print(paste("ignoring file", i, "- no data"))
       })
-      
+      if(!any(is.na(indx))) {
       if(is.data.frame(df)) {
         v <- ifelse(any(grepl("T",df[,1])), 1, 2)
         if (!is.null(z)) {v <- z}
         print(v)
-        #if (y=="beep" & v < 2) {
-        #  correct <- 5
-        #  df <- df[which(indx == correct),]
-        #} else if (y == "beep" & v > 1) {
-        #  correct <- 6
-        #  df <- df[which(indx == correct | indx == 5),]
-        #} else if (y=="node" & v < 2) {
-        #  correct <- 6
-        #  df <- df[which(indx == correct),]
-        #} else if (y=="node" & v > 1) {
-        #  correct <- 13
-        #  df <- df[which(indx == correct),]
-        #} else if (y=="gps" & v < 2) {
-        #  correct <- 6
-        #  df <- df[which(indx == correct | indx == 9),]
-        #} else {
-        #  correct <- 9
-        #  df <- df[which(indx == correct | indx == 6),]
-        #}
+        if (y=="beep" & v < 2) {
+          correct <- 5
+          df <- df[-(which(indx != correct)-1),]
+        } else if (y == "beep" & v > 1) {
+          correct <- 6
+          df <- df[-(which(indx != correct | indx != 5)-1),]
+        } else if (y=="node" & v < 2) {
+          correct <- 6
+          df <- df[-(which(indx != correct)-1),]
+        } else if (y=="node" & v > 1) {
+          correct <- 13
+          df <- df[-(which(indx != correct)-1),]
+        } else if (y=="gps" & v < 2) {
+          correct <- 6
+          df <- df[-(which(indx != correct | indx != 9)-1),]
+        } else {
+          correct <- 9
+          df <- df[-(which(indx != correct | indx != 6)-1),]
+        }
         
         if(any(row.names(df) == "NA")) {df <- df[-which(row.names(df)=="NA"),]}
         df <- df[,colnames(df) %in% known]
-      }
+      }}
       
       Correct_Colnames <- function(df) {
         
@@ -95,7 +95,10 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
             if(any(grepl("T", df[,idx]))) {
               vals <- as.POSIXct(df[,idx],format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)
             } else {
-              vals <- as.POSIXct(df[,idx], tz = "UTC", optional=TRUE)}
+              vals <- unname(sapply(df[,idx], function(x) as.POSIXct(x, format="%Y-%m-%d %H:%M:%OS", tz = "UTC", optional=TRUE)))
+              vals1 <- sapply(vals, function(x) format(as.POSIXct(x, origin="1970-01-01", tz="UTC"),"%Y-%m-%d %H:%M:%OS"))
+              vals <- as.POSIXct(vals1, tz="UTC")
+              }
             #post_count = nrow(df)
             #delta = pre_count - post_count
           } else {vals <- c()} 
@@ -104,7 +107,7 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
         reformat <- which(!sapply(timecols, is.null))
         df[,time_cols[reformat]] <- timecols[reformat]
         pre <- nrow(df)
-        df = df[grepl(DatePattern,df[,time_cols[reformat][1]]),]
+        #df = df[grepl(DatePattern,df[,time_cols[reformat][1]]),]
         df = df[complete.cases(df[,time_cols[reformat]]),]
         post <- nrow(df)
         delta = pre - post
