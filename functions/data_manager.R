@@ -42,22 +42,22 @@ load_data <- function(directory_name=NULL, starttime=NULL, endtime=NULL, tags=NU
         print(v)
         if (y=="beep" & v < 2) {
           correct <- 5
-          df <- df[-(which(indx != correct)-1),]
+          if(any(indx != correct)) {df <- df[-(which(indx != correct)-1),]}
         } else if (y == "beep" & v > 1) {
           correct <- 6
-          df <- df[-(which(indx != correct | indx != 5)-1),]
+          if(any(indx != correct & indx != 5)) {df <- df[-(which(indx != correct & indx != 5)-1),]}
         } else if (y=="node" & v < 2) {
           correct <- 6
-          df <- df[-(which(indx != correct)-1),]
+          if(any(indx != correct)) {df <- df[-(which(indx != correct)-1),]}
         } else if (y=="node" & v > 1) {
           correct <- 13
-          df <- df[-(which(indx != correct)-1),]
+          if(any(indx != correct)) {df <- df[-(which(indx != correct)-1),]}
         } else if (y=="gps" & v < 2) {
           correct <- 6
-          df <- df[-(which(indx != correct | indx != 9)-1),]
+          if(any(indx != correct & indx != 9)) {df <- df[-(which(indx != correct & indx != 9)-1),]}
         } else {
           correct <- 9
-          df <- df[-(which(indx != correct | indx != 6)-1),]
+          if(any(indx != correct & indx != 6)) {df <- df[-(which(indx != correct & indx != 6)-1),]}
         }
         
         if(any(row.names(df) == "NA")) {df <- df[-which(row.names(df)=="NA"),]}
