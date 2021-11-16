@@ -415,7 +415,7 @@ update_db <- function(d, outpath, myproject) {
   allnode <- dbReadTable(d, "data_file")
   files_import <- myfiles[which(!files_loc %in% allnode$path)]
   write.csv(files_import, "files.csv")
-  failed2 <- lapply(files_import, get_files_import, conn=d, outpath=outpath)
+  failed2 <- lapply(files_import, get_files_import, conn=d, outpath=outpath, myproject=myproject)
   faul <- which(!sapply(failed2[[1]], is.null)) 
   if(length(faul) > 0) {
   failed2 <- Map(`[`, failed2, faul)
@@ -426,8 +426,8 @@ update_db <- function(d, outpath, myproject) {
     }
 }
 
-get_files_import <- function(e, conn, outpath) {
-  e <- file.path(outpath, e)
+get_files_import <- function(e, conn, outpath, myproject) {
+  e <- file.path(outpath, myproject, e)
   print(e)
   y <- tail(unlist(strsplit(e, "/")), n=1)
 
