@@ -23,10 +23,10 @@ resave <- function(..., list = character(), file) {
   save(list = unique(c(previous, var.names)), file = file)
 }
 
-host <- 'https://account.celltracktech.com'
-project <- '/station/api/projects/'
+host <- 'https://data-api.internetofwildlife.com/' #'https://account.celltracktech.com'
+project <- '/station/api/projects'
 stations <- '/station/api/stations/'
-files <- '/station/api/file-list/'
+files <- '/station/api/file-list'
 file_types <- c("data", "node-data", "gps", "log", "telemetry", "sensorgnome")
 
 post <- function(endpoint, payload=NULL) {
@@ -156,7 +156,7 @@ dbExecute(conn, "CREATE TABLE IF NOT EXISTS gps
     basename <- a$name
     id <- a[['id']]
     my_stations <- getStations(project_id=id)
-  
+    print(my_stations)
     mystations <- lapply(my_stations$stations, function(c) {
       c <- as.data.frame(t(unlist(c)), stringsAsFactors=FALSE)
     
@@ -300,11 +300,11 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
   if(!exists("h")) {h <- NULL}
 return(h)}
 
-get_data <- function(project, outpath, f=NULL) {
+get_data <- function(thisproject, outpath, f=NULL) {
   myfiles <- list.files(outpath, recursive = TRUE)
   files_loc <- sapply(strsplit(myfiles, "/"), tail, n=1)
-  basename <- project$name
-  id <- project[['id']]
+  basename <- thisproject$name
+  id <- thisproject[['id']]
   dir.create(file.path(outpath, basename), showWarnings = FALSE)
   my_stations <- getStations(project_id=id)
 
@@ -325,12 +325,15 @@ get_data <- function(project, outpath, f=NULL) {
   return(outfiles)})
   print("getting files available for those stations...")
   filenames <- unname(rapply(files_avail, grep, pattern = "CTT", value=TRUE))
+  print("got the file list; comparing against your files")
   files_to <- filenames[!filenames %in% files_loc]
+  print("comparison complete")
 
   allfiles <- rapply(files_avail, function(z) z %in% files_to, how = "unlist")
   ids <- unlist(files_avail)[which(allfiles) - 1]
   print(paste("about to get", length(ids), "files"))
   file_names <- unlist(files_avail)[which(allfiles)]
+  print("prepped list of filenames to get")
 
   get_files <- function(x, y) {
 
@@ -375,6 +378,7 @@ return(failed)}
 
 get_my_data <- function(my_token, outpath, db_name=NULL, myproject=NULL) {
   projects <- content(POST(host, path = project, body = list(token=my_token), encode="json", verbose()), "parsed")
+  print(projects)
   projects <- projects[['projects']]
   #print(projects)
   if(!is.null(myproject)) {
