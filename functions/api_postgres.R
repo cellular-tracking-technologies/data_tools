@@ -148,7 +148,7 @@ dbExecute(conn, "CREATE TABLE IF NOT EXISTS gps
   sapply(projects, function(a) {
     b <- unname(as.data.frame(a))
     vars <- paste(dbListFields(conn, "ctt_project"), sep="", collapse=",")
-    insertnew <- dbSendQuery(conn, paste("INSERT INTO ","ctt_project"," (",vars,") VALUES ($2, $1) ON CONFLICT DO NOTHING",sep="")) 
+    insertnew <- dbSendQuery(conn, paste("INSERT INTO ","ctt_project"," (",vars,") VALUES ($1, $2) ON CONFLICT DO NOTHING",sep="")) 
   #it is possible you should be using dbSendStatement for all of these
     dbBind(insertnew, params=b)
     dbClearResult(insertnew)
