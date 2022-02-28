@@ -23,7 +23,7 @@ resave <- function(..., list = character(), file) {
   save(list = unique(c(previous, var.names)), file = file)
 }
 
-host <- 'https://data-api.internetofwildlife.com/' #'https://account.celltracktech.com'
+host <- 'https://api.internetofwildlife.com/' #'https://account.celltracktech.com'
 project <- '/station/api/projects'
 stations <- '/station/api/stations/'
 files <- '/station/api/file-list'
@@ -34,6 +34,7 @@ post <- function(endpoint, payload=NULL) {
   if (!is.null(payload)) {
     payload_to_send <- c(payload_to_send, payload)
   }
+  print(endpoint)
   response <- POST(host, path = endpoint, body=payload_to_send,encode="json", timeout(60)) 
   stop_for_status(response)
   return(content(response))
@@ -329,7 +330,7 @@ get_data <- function(thisproject, outpath, f=NULL) {
   files_to <- filenames[!filenames %in% files_loc]
   print("comparison complete")
 
-  allfiles <- rapply(files_avail, function(z) z %in% files_to, how = "unlist")
+  allfiles <- rapply(files_avail, function(z) z %in% files_to, how = "unlist") #this is the super intensive, time consuming function...
   ids <- unlist(files_avail)[which(allfiles) - 1]
   print(paste("about to get", length(ids), "files"))
   file_names <- unlist(files_avail)[which(allfiles)]
