@@ -26,10 +26,10 @@ source("functions/node_health.R")
 #It can contain any/all of your downloaded data files, just don't manipulate/add your own unrelated/altered files.
 #Unzip any zipped directories therein, but compressed csv files (csv.gz) don't need to be unzipped
 
-infile <- "~/Documents/data/meadows/Meadows V2"
+infile <- "~/Documents/data/radio_projects/node_health_test"
 
 #This is where you want your output to go
-outpath <- "~/Documents/plots/meadows"
+outpath <- "~/Documents/plots/indigo"
 
 freq <- "1 hour" #interval to summarize node health indicators of interest
 
@@ -61,7 +61,7 @@ my_tags <- beep_data[beep_data$TagId %in% c("your tag IDs"),]
 
 health_data <- all_data[[2]]
 #health_data now has a data frame of all of your node health files. 
-#subset_data <- health_data[health_data$Time > as.POSIXct("2021-08-12") & health_data$Time < as.POSIXct("2021-08-20"),]
+#subset_data <- health_data[[1]][health_data[[1]]$Time > as.POSIXct("2021-08-12") & health_data$Time < as.POSIXct("2021-08-20"),]
 
 gps_data <- all_data[[3]]
 
