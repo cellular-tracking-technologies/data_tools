@@ -127,4 +127,4 @@ mynodes <- node_plots(health_data,nodes,freq)
 
 #call the export_node_plots() function to output the plots looking for time stamp mismatches
 #the resulting plots will be in "outpath" named "nodes_<node>.png"
-export_node_plots(health=health_data,freq=freq,out_path=outpath, x=5,y=2,z=1, start = as.POSIXct("2021-08-12"))
+export_node_plots(health=health_data,freq=freq,out_path=outpath, x=5,y=2,z=1) #start = as.POSIXct("2021-08-12"))
