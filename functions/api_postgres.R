@@ -301,14 +301,16 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
   if(!exists("h")) {h <- NULL}
 return(h)}
 
-get_data <- function(thisproject, outpath, f=NULL) {
+get_data <- function(thisproject, outpath, f=NULL, my_station) {
   myfiles <- list.files(outpath, recursive = TRUE)
   files_loc <- sapply(strsplit(myfiles, "/"), tail, n=1)
   basename <- thisproject$name
   id <- thisproject[['id']]
   dir.create(file.path(outpath, basename), showWarnings = FALSE)
   my_stations <- getStations(project_id=id)
-
+  if(!is.null(my_station)) {
+    my_stations[["stations"]] <- list(my_stations[[1]][[which(sapply(my_stations[[1]], function(x) x[['station']][["id"]] == my_station))]])
+  }
   files_avail <- lapply(my_stations[["stations"]], function(station) {
     print(station)
     kwargs <- list(
@@ -377,7 +379,7 @@ get_data <- function(thisproject, outpath, f=NULL) {
 failed <- Map(get_files, ids, file_names)
 return(failed)}
 
-get_my_data <- function(my_token, outpath, db_name=NULL, myproject=NULL) {
+get_my_data <- function(my_token, outpath, db_name=NULL, myproject=NULL, mystation=NULL) {
   projects <- content(POST(host, path = project, body = list(token=my_token), encode="json", verbose()), "parsed")
   print(projects)
   projects <- projects[['projects']]
@@ -385,11 +387,12 @@ get_my_data <- function(my_token, outpath, db_name=NULL, myproject=NULL) {
   if(!is.null(myproject)) {
     projects <- list(projects[[which(sapply(projects, function(x) x[["name"]]) == myproject)]])
   }
+  
   if(!is.null(db_name)) {
     create_db(db_name, projects)
-    failed <- lapply(projects, get_data, f=db_name, outpath=outpath)
+    failed <- lapply(projects, get_data, f=db_name, outpath=outpath, my_station=mystation)
   } else {
-      failed <- lapply(projects, get_data, outpath=outpath)
+      failed <- lapply(projects, get_data, outpath=outpath, my_station=mystation)
   }
   faul <- which(!sapply(failed[[1]], is.null)) 
   if(length(faul > 0)) {
