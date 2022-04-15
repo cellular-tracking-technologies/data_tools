@@ -279,7 +279,7 @@ weighted_average <- function(freq, beeps, node, node_health=NULL, MAX_NODES=0, t
   outdf$hour <- as.integer(format(outdf$freq, "%H"))
   outdf <- outdf[complete.cases(outdf),]
   coordinates(outdf) <- ~avg_x+avg_y
-  crs(outdf) <- CRS(paste0("+proj=utm +zone=", zone, "+datum=WGS84")) 
+  crs(outdf) <- CRS(paste0("+proj=utm +zone=", zone, " +datum=WGS84")) 
   outdf <- spTransform(outdf,CRS("+proj=longlat +datum=WGS84"))
   return(outdf)}
 
