@@ -301,7 +301,8 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
   if(!exists("h")) {h <- NULL}
 return(h)}
 
-get_data <- function(thisproject, outpath, f=NULL, my_station) {
+get_data <- function(thisproject, outpath, f=NULL, my_station, beginning, ending) {
+  #print("getting your file list")
   myfiles <- list.files(outpath, recursive = TRUE)
   files_loc <- sapply(strsplit(myfiles, "/"), tail, n=1)
   basename <- thisproject$name
@@ -311,15 +312,23 @@ get_data <- function(thisproject, outpath, f=NULL, my_station) {
   if(!is.null(my_station)) {
     my_stations[["stations"]] <- list(my_stations[[1]][[which(sapply(my_stations[[1]], function(x) x[['station']][["id"]] == my_station))]])
   }
-  files_avail <- lapply(my_stations[["stations"]], function(station) {
+  files_avail <- lapply(my_stations[["stations"]], function(station, mybeginning=beginning, myending=ending) {
     print(station)
+    if(is.null(mybeginning)) {
+      beginning = as.POSIXct(station[['deploy-at']],format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)
+    } else {beginning = as.POSIXct(as.Date(mybeginning),format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)}
     kwargs <- list(
       station_id = station[["station"]][["id"]],
-      begin = as.POSIXct(station[['deploy-at']],format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)
+      begin = beginning
     )
-    if(!is.null(station[['end-at']])) {
+    print(is.null(myending))
+    if(!is.null(myending)) {
+      kwargs[['end']] = as.POSIXct(as.Date(myending),format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)
+    } else if(!is.null(station[['end-at']])) {
       kwargs[['end']] = as.POSIXct(station[['end-at']],format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)
     }
+    
+    print(kwargs)
     #print("getting station file list...")
     file_info <- do.call(getStationFileList, kwargs)
     outfiles <- file_info[['files']]
@@ -379,7 +388,7 @@ get_data <- function(thisproject, outpath, f=NULL, my_station) {
 failed <- Map(get_files, ids, file_names)
 return(failed)}
 
-get_my_data <- function(my_token, outpath, db_name=NULL, myproject=NULL, mystation=NULL) {
+get_my_data <- function(my_token, outpath, db_name=NULL, myproject=NULL, mystation=NULL, begin=NULL, end=NULL) {
   projects <- content(POST(host, path = project, body = list(token=my_token), encode="json", verbose()), "parsed")
   print(projects)
   projects <- projects[['projects']]
@@ -390,9 +399,9 @@ get_my_data <- function(my_token, outpath, db_name=NULL, myproject=NULL, mystati
   
   if(!is.null(db_name)) {
     create_db(db_name, projects)
-    failed <- lapply(projects, get_data, f=db_name, outpath=outpath, my_station=mystation)
+    failed <- lapply(projects, get_data, f=db_name, outpath=outpath, my_station=mystation, beginning=begin, ending=end)
   } else {
-      failed <- lapply(projects, get_data, outpath=outpath, my_station=mystation)
+      failed <- lapply(projects, get_data, outpath=outpath, my_station=mystation, beginning=begin, ending=end)
   }
   faul <- which(!sapply(failed[[1]], is.null)) 
   if(length(faul > 0)) {
