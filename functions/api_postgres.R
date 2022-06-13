@@ -179,7 +179,7 @@ dbExecute(conn, "CREATE TABLE IF NOT EXISTS gps
   #dbClearResult(insertnew)
   
     vars <- paste(dbListFields(conn, "ctt_project_station"), sep="", collapse=",")
-    print(vars)
+    #print(vars)
     insertnew <- dbSendQuery(conn, paste("INSERT INTO ","ctt_project_station"," (",vars,") VALUES ($1, $4, $2, $3, $5)
                                        ON CONFLICT DO NOTHING",sep=""))
     dbBind(insertnew, params=mystations)
@@ -267,10 +267,9 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
       names(contents) <- sapply(names(contents), function(x) gsub('([[:lower:]])([[:upper:]])', '\\1_\\2', x))
     } else {nodeids <- c()}
     if (filetype %in% c("raw", "node_health", "gps")) {
-      print(str(contents))
-      print(dbListFields(conn, filetype))
-      if (filetype == "raw")
-      {
+      #print(str(contents))
+      #print(dbListFields(conn, filetype))
+      if (filetype == "raw") {
         vars <- paste(dbListFields(conn, filetype)[2:length(dbListFields(conn, filetype))], sep="", collapse=",") 
         vals <- paste(seq_along(1:(length(dbListFields(conn, filetype))-1)), sep="", collapse = ", $")
         names(contents) <- tolower(names(contents))
@@ -285,6 +284,7 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
         contents <- contents[contents$time < Sys.time() & contents$time > begin,]
       }
       h <- tryCatch({
+          if(any(row.names(contents) == "NA")) {contents <- contents[-which(row.names(contents)=="NA"),]}
           dbWriteTable(conn, filetype, contents, append=TRUE)
           insertnew <- dbSendQuery(conn, paste("INSERT INTO ","data_file (path)"," VALUES ($1)
                                          ON CONFLICT DO NOTHING",sep=""))
@@ -293,7 +293,7 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
           NULL
         }, error = function(err) {
           # error handler picks up where error was generated, in Bob's script it breaks if header is missing
-          
+          print("could not insert")
           return(list(err, contents, y))
         })
     }
@@ -431,7 +431,7 @@ update_db <- function(d, outpath, myproject) {
   files_loc <- sapply(strsplit(myfiles, "/"), tail, n=1)
   allnode <- dbReadTable(d, "data_file")
   files_import <- myfiles[which(!files_loc %in% allnode$path)]
-  write.csv(files_import, "files.csv")
+  write.csv(files_import, file.path(outpath,"files.csv"))
   failed2 <- lapply(files_import, get_files_import, conn=d, outpath=outpath, myproject=myproject)
   faul <- which(!sapply(failed2[[1]], is.null)) 
   if(length(faul) > 0) {
@@ -465,6 +465,7 @@ get_files_import <- function(e, conn, outpath, myproject) {
       filetype <- "raw"
     }
   if (filetype %in% c("raw", "node_health", "gps")) {
+    print("attempting import")
   contents <- tryCatch({
     if (file.size(e) > 0) {
       read_csv(e)
@@ -472,6 +473,7 @@ get_files_import <- function(e, conn, outpath, myproject) {
       return(NULL)
     })
     if(!is.null(contents)) {
+      print("inserting contents")
       z <- db_insert(contents, filetype, conn, sensor, y, begin)
       }
   }
