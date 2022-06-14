@@ -157,6 +157,7 @@ dbExecute(conn, "CREATE TABLE IF NOT EXISTS gps
     basename <- a$name
     id <- a[['id']]
     my_stations <- getStations(project_id=id)
+    print("RETURNED FROM API")
     print(my_stations)
     mystations <- lapply(my_stations$stations, function(c) {
       c <- as.data.frame(t(unlist(c)), stringsAsFactors=FALSE)
@@ -171,6 +172,7 @@ dbExecute(conn, "CREATE TABLE IF NOT EXISTS gps
     mystations <- as.data.frame(rbindlist(mystations, fill=TRUE))
     MYSTATIONS <- list(unique(mystations$station_id))
     mystations <- unname(mystations)
+    print("FORMATTED")
     print(mystations)
   
   #insertnew <- dbSendQuery(conn, paste("INSERT INTO ","station (station_id)"," VALUES ($1)
@@ -187,9 +189,24 @@ dbExecute(conn, "CREATE TABLE IF NOT EXISTS gps
   })
 }
 
+querygen <- function(mycont) {
+  pieces <- paste(names(mycont), mycont, sep=" = ")
+  na <- grep(" = NA", pieces)
+  if (length(na > 0)) {pieces[na] <- gsub("= NA","is null",pieces[na])}
+  pieces <- paste(pieces, collapse=" and ")
+  return(pieces)
+}
 timeset <- function(g) {unname(sapply(g, function(h) ifelse(is.na(h), NA, paste(as.character(h), "UTC"))))}
 db_insert <- function(contents, filetype, conn, sensor, y, begin) {
   print(filetype)
+  print(str(contents))
+  print(begin)
+  if("Time" %in% colnames(contents)) {
+    contents <- filter(contents, Time < Sys.time() & Time > begin)
+    
+    print(contents)
+    #contents <- contents[contents$Time < Sys.time() & contents$Time > begin,]
+  }
   contents[,unname(which(sapply(contents, is.POSIXct)))] <- ifelse(nrow(contents[,unname(which(sapply(contents, is.POSIXct)))]) > 1,
                                                                    as_tibble(apply(contents[,unname(which(sapply(contents, is.POSIXct)))], 2,
                                                                                    timeset)),
@@ -224,6 +241,15 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
         contents$n_fixes <- NA
       }
     names(contents) <- sapply(names(contents), function(x) gsub('([[:lower:]])([[:upper:]])', '\\1_\\2', x))
+    #if(fix=TRUE) {
+    #  query <- querygen(contents[1,])
+    #  res <- dbGetQuery(conn, paste0("select * from gps where ", query))
+    #  if(nrow(res) > 0) {
+    #    me <- data.frame(matrix(ncol=ncol(contents), nrow=0))
+    #    names(me) <- names(contents)
+    #    contents <- me
+    #  }
+    #}
     } else if (filetype == "raw") {
       if (length(delete.columns) > 0) {
         if(ncol(contents) > 7) {
@@ -242,6 +268,15 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
         dbClearResult(insertnew)
       }
       names(contents) <- sapply(names(contents), function(x) gsub('([[:lower:]])([[:upper:]])', '\\1_\\2', x))
+      #if(fix=TRUE) {
+      #  query <- querygen(contents[1,])
+      #  res <- dbGetQuery(conn, paste0("select * from raw where ", query))
+      #  if(nrow(res) > 0) {
+      #    me <- data.frame(matrix(ncol=ncol(contents), nrow=0))
+      #    names(me) <- names(contents)
+      #    contents <- me
+      #  }
+      #}
     } else if (filetype == "node_health") {
       if (length(delete.columns) > 0) {
         if(ncol(contents) > 9) {
@@ -265,6 +300,15 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
       dbBind(insertnew, params=list(unique(nodeids)))
       dbClearResult(insertnew)
       names(contents) <- sapply(names(contents), function(x) gsub('([[:lower:]])([[:upper:]])', '\\1_\\2', x))
+      #if(fix=TRUE) {
+      #  query <- querygen(contents[1,])
+      #  res <- dbGetQuery(conn, paste0("select * from node_health where ", query))
+      #  if(nrow(res) > 0) {
+      #    me <- data.frame(matrix(ncol=ncol(contents), nrow=0))
+      #    names(me) <- names(contents)
+      #    contents <- me
+        #}
+      #}
     } else {nodeids <- c()}
     if (filetype %in% c("raw", "node_health", "gps")) {
       #print(str(contents))
@@ -280,17 +324,18 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
       names(contents) <- tolower(names(contents))
       contents <- contents[,dbListFields(conn, filetype)]
       }
-      if("time" %in% colnames(contents)) {
-        contents <- contents[contents$time < Sys.time() & contents$time > begin,]
-      }
       h <- tryCatch({
           if(any(row.names(contents) == "NA")) {contents <- contents[-which(row.names(contents)=="NA"),]}
+        #if(fixthis = TRUE) {
+          #fill out here
+        #} else {
           dbWriteTable(conn, filetype, contents, append=TRUE)
           insertnew <- dbSendQuery(conn, paste("INSERT INTO ","data_file (path)"," VALUES ($1)
                                          ON CONFLICT DO NOTHING",sep=""))
           dbBind(insertnew, params=list(y))
           dbClearResult(insertnew)
           NULL
+        #}
         }, error = function(err) {
           # error handler picks up where error was generated, in Bob's script it breaks if header is missing
           print("could not insert")
@@ -356,7 +401,12 @@ get_data <- function(thisproject, outpath, f=NULL, my_station, beginning, ending
     sensorid <- unlist(strsplit(fileinfo,"-"))
     sensor <- sensorid[1]
     faul <- which(sapply(my_stations[["stations"]], function(sta) sta$station$id==sensor)) 
-    begin <- as.POSIXct(my_stations[["stations"]][[faul]]$`deploy-at`,format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE) 
+    if(length(faul) > 1) {
+      begin <- sapply(faul, function(x) as.POSIXct(my_stations[["stations"]][[x]]$`deploy-at`,format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE))
+      begin <- max(begin)
+    } else {begin <- as.POSIXct(my_stations[["stations"]][[faul]]$`deploy-at`,format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)}
+    print(paste("look here", faul))
+    print(my_stations[["stations"]])
     filenameinfo <- sensorid[2]
     file_info <- unlist(strsplit(filenameinfo, "\\."))[1]
     filetype <- ifelse(is.na(as.integer(file_info)),file_info,"sensorgnome")
@@ -378,6 +428,7 @@ get_data <- function(thisproject, outpath, f=NULL, my_station, beginning, ending
       print(x)
       write.csv(contents, file=gzfile(file.path(outpath, basename, sensor, filetype, y)), row.names=FALSE)
       if(!is.null(f)) {
+        print(begin)
         z <- db_insert(contents, filetype, f, sensor, y, begin)
       }
       }
@@ -426,11 +477,19 @@ pop <- function(x) { #this was a function written before the data file table was
   dbClearResult(insertnew)
 }
 
-update_db <- function(d, outpath, myproject) {
+update_db <- function(d, outpath, myproject, fix=FALSE) {
   myfiles <- list.files(file.path(outpath, myproject), recursive = TRUE)
   files_loc <- sapply(strsplit(myfiles, "/"), tail, n=1)
   allnode <- dbReadTable(d, "data_file")
-  files_import <- myfiles[which(!files_loc %in% allnode$path)]
+  if(fix) {
+    res <- dbGetQuery(d, "select distinct path from gps")
+    res2 <- dbGetQuery(d, "select distinct path from raw")
+    res1 <- dbGetQuery(d, "select distinct path from node_health")
+    filesdone <- c(res$path, res1$path, res2$path)
+  } else {
+    filesdone <- allnode$path
+  }
+  files_import <- myfiles[which(!files_loc %in% filesdone)]
   write.csv(files_import, file.path(outpath,"files.csv"))
   failed2 <- lapply(files_import, get_files_import, conn=d, outpath=outpath, myproject=myproject)
   faul <- which(!sapply(failed2[[1]], is.null)) 
@@ -474,8 +533,18 @@ get_files_import <- function(e, conn, outpath, myproject) {
     })
     if(!is.null(contents)) {
       print("inserting contents")
-      z <- db_insert(contents, filetype, conn, sensor, y, begin)
+      #if(fix=TRUE) {
+      #z <- db_insert(contents, filetype, conn, sensor, y, begin, fix=TRUE)
+      #} else {
+        z <- db_insert(contents, filetype, conn, sensor, y, begin)
+      #}
       }
   }
   if(!exists("z")) {z <- NULL}
+}
+
+patch <- function(d, outpath, myproject) {
+myfiles <- list.files(file.path(outpath, myproject), recursive = TRUE)
+files_loc <- sapply(strsplit(myfiles, "/"), tail, n=1)
+failed2 <- lapply(myfiles, get_files_import, conn=d, outpath=outpath, myproject=myproject, fix=TRUE)
 }
