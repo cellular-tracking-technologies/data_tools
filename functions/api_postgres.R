@@ -37,12 +37,12 @@ post <- function(endpoint, payload=NULL) {
   print(endpoint)
   response <- POST(host, path = endpoint, body=payload_to_send,encode="json", timeout(60)) 
   stop_for_status(response)
-  return(content(response))
+  return(response)
 }
 
 getStations <- function(project_id) {
   out <- post(endpoint=stations, payload=list("project-id"=project_id))
-  return(out)
+  return(content(out))
 }
 
 getStationFileList <- function(station_id, begin, filetypes=NULL, end=NULL) {
@@ -54,7 +54,7 @@ getStationFileList <- function(station_id, begin, filetypes=NULL, end=NULL) {
     payload[['file-types']] = add_types
   } 
   if (!is.null(end)) {payload[['end']] = as.Date(end)}
-return(post(endpoint=endpoint, payload=payload))}
+return(content(post(endpoint=endpoint, payload=payload)))}
 
 downloadFiles <- function(file_id) {
   endpoint <- "/station/api/download-file/"
@@ -421,6 +421,11 @@ get_data <- function(thisproject, outpath, f=NULL, my_station, beginning, ending
     
     if (filetype != "log" & filetype != "telemetry" & filetype != "sensorgnome") {
       contents = downloadFiles(file_id = x)
+      if (filetype == "raw") {
+        contents <- content(contents, type="text/csv", col_types = list(NodeId = 'c'))
+      } else {
+        contents <- content(contents)
+      }
       if (!is.null(contents)) {
       dir.create(file.path(outpath, basename, sensor), showWarnings = FALSE)
       dir.create(file.path(outpath, basename, sensor, filetype), showWarnings = FALSE)
