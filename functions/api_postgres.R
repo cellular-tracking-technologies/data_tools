@@ -443,7 +443,7 @@ get_data <- function(thisproject, outpath, f=NULL, my_station, beginning, ending
           }
           v <- ifelse(any(colnames(contents)=="Validated"), 2, 1)
           correct <- ifelse(v < 2, 5, 6)
-          indx <- count.fields(e, sep=",")
+          indx <- count.fields(file.path(outpath, basename, sensor, filetype, y), sep=",")
           if(any(indx != correct)) {
             rowfix <- which(indx != correct) - 1
             getrow <- read.csv(e,as.is=TRUE, na.strings=c("NA", ""), skipNul = TRUE, skip=rowfix-1, nrow=1)
