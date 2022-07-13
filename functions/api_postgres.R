@@ -446,7 +446,7 @@ get_data <- function(thisproject, outpath, f=NULL, my_station, beginning, ending
           indx <- count.fields(file.path(outpath, basename, sensor, filetype, y), sep=",")
           if(any(indx != correct)) {
             rowfix <- which(indx != correct) - 1
-            getrow <- read.csv(e,as.is=TRUE, na.strings=c("NA", ""), skipNul = TRUE, skip=rowfix-1, nrow=1)
+            getrow <- read.csv(file.path(outpath, basename, sensor, filetype, y),as.is=TRUE, na.strings=c("NA", ""), skipNul = TRUE, skip=rowfix-1, nrow=1)
             getrow[,1]<- str_extract(getrow[,1], DatePattern) #handling assumes e.g. extra field and correct record starts in column 2
             if(any(grepl("T", getrow[,1]))) {
               vals <- as.POSIXct(getrow[,1],format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)
