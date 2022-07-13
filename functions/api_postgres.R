@@ -202,8 +202,16 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
   print(str(contents))
   print(begin)
   if("Time" %in% colnames(contents)) {
+    if(is.character(contents$Time)) { #does this just handle 1 broken date? if so, what happens when there are more broken rows?
+      DatePattern = '[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}[T, ][[:digit:]]{2}:[[:digit:]]{2}:[[:digit:]]{2}(.[[:digit:]]{3})?[Z]?'
+      exactDatePattern = '^[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}[T, ][[:digit:]]{2}:[[:digit:]]{2}:[[:digit:]]{2}(.[[:digit:]]{3})?[Z]?$'
+      brokenrow <- grep(exactDatePattern, contents$Time, invert=TRUE) #find row that has a date embedded in a messed up string (i.e. interrupted rows)
+      contents[brokenrow,1]<- str_extract(contents[brokenrow,1], DatePattern)
+      contents$Time <- as.POSIXct(contents$Time)
+      contents <- filter(contents, Time < Sys.time() & Time > begin)
+    } else {
     contents <- filter(contents, Time < Sys.time() & Time > begin)
-    
+    }
     print(contents)
     #contents <- contents[contents$Time < Sys.time() & contents$Time > begin,]
   }
@@ -213,25 +221,17 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
     bind_rows(apply(contents[,unname(which(sapply(contents, is.POSIXct)))], 2, timeset)))
   
   contents <- data.frame(contents)
-  delete.columns <- grep("(^X)", colnames(contents), perl=T)
-  if (length(delete.columns) > 0) {
-    contents <- rbind(contents,Correct_Colnames(contents))
-  }
+
   contents$station_id <- sensor
   contents$path <- y
 
   if(!is.null(contents)) {
     if (filetype == "gps") {
-      if (length(delete.columns) > 0) {
-        if(ncol(contents) > 9) {
-          names(contents) <- c("recorded.at","gps.at","latitude","longitude","altitude","quality","mean.lat","mean.lng","n.fixes","station_id",
-                               "path")
-        }}
       colnames(contents)[colnames(contents)=="recorded.at"] <- "recorded_at"
       contents$recorded_at <- as.character(contents$recorded_at)
       colnames(contents)[colnames(contents)=="gps.at"] <- "gps_at"
       contents$gps_at <- as.character(contents$gps_at)
-      if ("mean lat" %in% colnames(contents)) {
+      if ("mean.lat" %in% colnames(contents)) {
         colnames(contents)[colnames(contents)=="mean.lat"] <- "mean_lat"
         colnames(contents)[colnames(contents)=="mean.lng"] <- "mean_lng"
         colnames(contents)[colnames(contents)=="n.fixes"] <- "n_fixes"
@@ -251,11 +251,6 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
     #  }
     #}
     } else if (filetype == "raw") {
-      if (length(delete.columns) > 0) {
-        if(ncol(contents) > 7) {
-          names(contents) <- c("time","RadioId","TagId","TagRSSI","NodeId","validated","station_id", "path")
-        }
-      }
       print(names(contents))
       if (!(any(tolower(names(contents))=="validated"))) {contents$validated <- NA}
       contents$RadioId <- as.integer(contents$RadioId)
@@ -266,6 +261,9 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
                                            ON CONFLICT DO NOTHING",sep=""))
         dbBind(insertnew, params=list(unique(nodeids)))
         dbClearResult(insertnew)
+      }
+      if(length(which(nchar(contents$TagId) != 8)) > 0) {
+        contents <- contents[-which(nchar(contents$TagId) != 8),] #drop rows where TagId not 8 characters
       }
       names(contents) <- sapply(names(contents), function(x) gsub('([[:lower:]])([[:upper:]])', '\\1_\\2', x))
       #if(fix=TRUE) {
@@ -278,12 +276,7 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
       #  }
       #}
     } else if (filetype == "node_health") {
-      if (length(delete.columns) > 0) {
-        if(ncol(contents) > 9) {
-          names(contents) <- c("time","RadioId","NodeId","NodeRssi","Battery","celsius","RecordedAt","firmware","SolarVolts","SolarCurrent","CumulativeSolarCurrent","latitude","longitude","station_id",
-                               "path")
-        }
-      }
+
       contents$Battery[which(contents$Battery > 9)] <- NA
       if(ncol(contents) < 9) {
         contents$RecordedAt <- NA
@@ -422,16 +415,66 @@ get_data <- function(thisproject, outpath, f=NULL, my_station, beginning, ending
     if (filetype != "log" & filetype != "telemetry" & filetype != "sensorgnome") {
       contents = downloadFiles(file_id = x)
       if (filetype == "raw") {
-        contents <- content(contents, type="text/csv", col_types = list(NodeId = 'c'))
+        contents <- content(contents, type="text", col_types = list(NodeId = 'c'))
       } else {
-        contents <- content(contents)
+        contents <- content(contents, type="text")
       }
       if (!is.null(contents)) {
       dir.create(file.path(outpath, basename, sensor), showWarnings = FALSE)
       dir.create(file.path(outpath, basename, sensor, filetype), showWarnings = FALSE)
       print(paste("downloading",y,"to",file.path(outpath, basename, sensor, filetype)))
       print(x)
-      write.csv(contents, file=gzfile(file.path(outpath, basename, sensor, filetype, y)), row.names=FALSE)
+      write(contents, file=gzfile(file.path(outpath, basename, sensor, filetype, y)))
+      contents <- tryCatch({
+          read_csv(file.path(outpath, basename, sensor, filetype, y), col_names = TRUE)
+        }, error = function(err) {
+          return(NULL)
+        })
+      if(!is.null(contents)) {
+        delete.columns <- grep("(^X)", colnames(contents), perl=T)
+        if (length(delete.columns) > 0) {
+          contents <- rbind(contents,Correct_Colnames(contents))
+        }
+        if(filetype == "raw") {
+          if (length(delete.columns) > 0) {
+            if(ncol(contents) > 5) {
+              names(contents) <- c("Time","RadioId","TagId","TagRSSI","NodeId","Validated")
+            } else {names(contents) <- c("Time","RadioId","TagId","TagRSSI","NodeId")}
+          }
+          v <- ifelse(any(colnames(contents)=="Validated"), 2, 1)
+          correct <- ifelse(v < 2, 5, 6)
+          indx <- count.fields(e, sep=",")
+          if(any(indx != correct)) {
+            rowfix <- which(indx != correct) - 1
+            getrow <- read.csv(e,as.is=TRUE, na.strings=c("NA", ""), skipNul = TRUE, skip=rowfix-1, nrow=1)
+            getrow[,1]<- str_extract(getrow[,1], DatePattern) #handling assumes e.g. extra field and correct record starts in column 2
+            if(any(grepl("T", getrow[,1]))) {
+              vals <- as.POSIXct(getrow[,1],format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)
+            } else {
+              vals <- unname(sapply(getrow[,1], function(x) as.POSIXct(x, format="%Y-%m-%d %H:%M:%OS", tz = "UTC", optional=TRUE)))
+              vals1 <- sapply(vals, function(x) format(as.POSIXct(x, origin="1970-01-01", tz="UTC"),"%Y-%m-%d %H:%M:%OS"))
+              vals <- as.POSIXct(vals1, tz="UTC")
+            }
+            getrow[,1] <- vals
+            getrow[,3] <- as.character(getrow[,3])
+            contents[rowfix,] <- getrow[1,]
+          }
+        } else if(filetype=="gps") {
+          if(length(delete.columns) > 0) {
+            if(ncol(contents) > 8) {
+              names(contents) <- c("recorded.at","gps.at","latitude","longitude","altitude","quality","mean.lat","mean.lng","n.fixes")
+            } else {names(contents) <- c("recorded.at","gps.at","latitude","longitude","altitude","quality")}
+            }
+        } else if(filetype == "node_health") {
+          if (length(delete.columns) > 0) {
+            if(ncol(contents) > 9) {
+              names(contents) <- c("Time","RadioId","NodeId","NodeRssi","Battery","celsius","RecordedAt","firmware","SolarVolts","SolarCurrent","CumulativeSolarCurrent","latitude","longitude")
+            } else {
+               names(contents) <- c("Time","RadioId","NodeId","NodeRssi","Battery","celsius")
+            }
+          }
+        }
+        }
       if(!is.null(f)) {
         print(begin)
         z <- db_insert(contents, filetype, f, sensor, y, begin)
@@ -532,11 +575,32 @@ get_files_import <- function(e, conn, outpath, myproject) {
     print("attempting import")
   contents <- tryCatch({
     if (file.size(e) > 0) {
-      read_csv(e)
+      read_csv(e, col_names = TRUE)
     }}, error = function(err) {
       return(NULL)
     })
     if(!is.null(contents)) {
+      if(filetype == "raw") {
+      v <- ifelse(any(colnames(contents)=="Validated"), 2, 1)
+      correct <- ifelse(v < 2, 5, 6)
+      indx <- count.fields(e, sep=",")
+      if(any(indx != correct)) {
+        rowfix <- which(indx != correct) - 1
+        getrow <- read.csv(e,as.is=TRUE, na.strings=c("NA", ""), skipNul = TRUE, skip=rowfix-1, nrow=1)
+        getrow[,1]<- str_extract(getrow[,1], DatePattern) #handling assumes e.g. extra field and correct record starts in column 2
+        if(any(grepl("T", getrow[,1]))) {
+          vals <- as.POSIXct(getrow[,1],format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)
+        } else {
+          vals <- unname(sapply(getrow[,1], function(x) as.POSIXct(x, format="%Y-%m-%d %H:%M:%OS", tz = "UTC", optional=TRUE)))
+          vals1 <- sapply(vals, function(x) format(as.POSIXct(x, origin="1970-01-01", tz="UTC"),"%Y-%m-%d %H:%M:%OS"))
+          vals <- as.POSIXct(vals1, tz="UTC")
+        }
+        getrow[,1] <- vals
+        getrow[,3] <- as.character(getrow[,3])
+        contents[rowfix,] <- getrow[1,]
+      }
+      }
+      
       print("inserting contents")
       #if(fix=TRUE) {
       #z <- db_insert(contents, filetype, conn, sensor, y, begin, fix=TRUE)
