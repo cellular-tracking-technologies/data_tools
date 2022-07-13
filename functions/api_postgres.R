@@ -331,7 +331,11 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
         #}
         }, error = function(err) {
           # error handler picks up where error was generated, in Bob's script it breaks if header is missing
-          print("could not insert")
+          myquery <- paste("INSERT INTO ", filetype, " (", vars,") VALUES ($",vals,")
+                                         ON CONFLICT DO NOTHING",sep="")
+          insertnew <- dbSendQuery(conn, myquery)
+          dbBind(insertnew, params=unname(contents))
+          dbClearResult(insertnew)
           return(list(err, contents, y))
         })
     }
