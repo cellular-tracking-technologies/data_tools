@@ -580,7 +580,16 @@ get_files_import <- function(e, conn, outpath, myproject) {
       return(NULL)
     })
     if(!is.null(contents)) {
+      delete.columns <- grep("(^X)", colnames(contents), perl=T)
+      if (length(delete.columns) > 0) {
+        contents <- rbind(contents,Correct_Colnames(contents))
+      }
       if(filetype == "raw") {
+        if (length(delete.columns) > 0) {
+          if(ncol(contents) > 5) {
+            names(contents) <- c("Time","RadioId","TagId","TagRSSI","NodeId","Validated")
+          } else {names(contents) <- c("Time","RadioId","TagId","TagRSSI","NodeId")}
+        }
       v <- ifelse(any(colnames(contents)=="Validated"), 2, 1)
       correct <- ifelse(v < 2, 5, 6)
       indx <- count.fields(e, sep=",")
@@ -599,6 +608,20 @@ get_files_import <- function(e, conn, outpath, myproject) {
         getrow[,3] <- as.character(getrow[,3])
         contents[rowfix,] <- getrow[1,]
       }
+      } else if(filetype=="gps") {
+        if(length(delete.columns) > 0) {
+          if(ncol(contents) > 8) {
+            names(contents) <- c("recorded.at","gps.at","latitude","longitude","altitude","quality","mean.lat","mean.lng","n.fixes")
+          } else {names(contents) <- c("recorded.at","gps.at","latitude","longitude","altitude","quality")}
+        }
+      } else if(filetype == "node_health") {
+        if (length(delete.columns) > 0) {
+          if(ncol(contents) > 9) {
+            names(contents) <- c("Time","RadioId","NodeId","NodeRssi","Battery","celsius","RecordedAt","firmware","SolarVolts","SolarCurrent","CumulativeSolarCurrent","latitude","longitude")
+          } else {
+            names(contents) <- c("Time","RadioId","NodeId","NodeRssi","Battery","celsius")
+          }
+        }
       }
       
       print("inserting contents")
