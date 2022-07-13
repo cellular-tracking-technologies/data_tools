@@ -317,7 +317,7 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
       names(contents) <- tolower(names(contents))
       contents <- contents[,dbListFields(conn, filetype)]
       }
-      h <- tryCatch({
+      h <- tryCatch({tryCatch({
           if(any(row.names(contents) == "NA")) {contents <- contents[-which(row.names(contents)=="NA"),]}
         #if(fixthis = TRUE) {
           #fill out here
@@ -336,8 +336,12 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
           insertnew <- dbSendQuery(conn, myquery)
           dbBind(insertnew, params=unname(contents))
           dbClearResult(insertnew)
-          return(list(err, contents, y))
         })
+      }, error = function(err) {
+        print("could not insert")
+        return(list(err, contents, y))
+        }
+        )
     }
   }
   if(!exists("h")) {h <- NULL}
