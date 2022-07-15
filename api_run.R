@@ -14,7 +14,7 @@ update_db(conn, outpath, myproject)
 dbDisconnect(conn)
 
 #source("functions/filecatch.R")
-#filecatch(outpath, "directory path where you want your caught files to go")
+#findfiles(outpath, "directory path where you want your caught files to go")
 
 time_elapse <- Sys.time() - start
 print(time_elapse)
