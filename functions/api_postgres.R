@@ -1,13 +1,3 @@
-list.of.packages <- c("httr", "DBI", "RPostgres","data.table","tidyverse")
-new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-if(length(new.packages)) install.packages(new.packages)
-
-library(httr)
-library(DBI)
-library(RPostgres)
-library(data.table)
-library(tidyverse)
-
 Correct_Colnames <- function(df) {
   rowval <- gsub("^X\\.", "-",  colnames(df))
   rowval <- gsub("^X", "",  rowval)
@@ -35,14 +25,14 @@ post <- function(endpoint, payload=NULL) {
     payload_to_send <- c(payload_to_send, payload)
   }
   print(endpoint)
-  response <- POST(host, path = endpoint, body=payload_to_send,encode="json", timeout(60)) 
-  stop_for_status(response)
+  response <- httr::POST(host, path = endpoint, body=payload_to_send,encode="json") 
+  httr::stop_for_status(response)
   return(response)
 }
 
 getStations <- function(project_id) {
   out <- post(endpoint=stations, payload=list("project-id"=project_id))
-  return(content(out))
+  return(httr::content(out))
 }
 
 getStationFileList <- function(station_id, begin, filetypes=NULL, end=NULL) {
@@ -54,7 +44,7 @@ getStationFileList <- function(station_id, begin, filetypes=NULL, end=NULL) {
     payload[['file-types']] = add_types
   } 
   if (!is.null(end)) {payload[['end']] = as.Date(end)}
-return(content(post(endpoint=endpoint, payload=payload)))}
+return(httr::content(post(endpoint=endpoint, payload=payload)))}
 
 downloadFiles <- function(file_id) {
   endpoint <- "/station/api/download-file/"
@@ -63,24 +53,24 @@ downloadFiles <- function(file_id) {
 }
 
 create_db <- function(conn, projects) {
-dbExecute(conn, "CREATE TABLE IF NOT EXISTS ctt_project
+DBI::dbExecute(conn, "CREATE TABLE IF NOT EXISTS ctt_project
   (
     id	smallint PRIMARY KEY,
     name	TEXT NOT NULL UNIQUE
   )")
 #
 
-dbExecute(conn, "CREATE TABLE IF NOT EXISTS nodes
+DBI::dbExecute(conn, "CREATE TABLE IF NOT EXISTS nodes
   (
     node_id TEXT NOT NULL PRIMARY KEY
   )")
 
-dbExecute(conn, "CREATE TABLE IF NOT EXISTS data_file
+DBI::dbExecute(conn, "CREATE TABLE IF NOT EXISTS data_file
   (
     path TEXT PRIMARY KEY
   )")
 
-dbExecute(conn, "CREATE TABLE IF NOT EXISTS ctt_project_station 
+DBI::dbExecute(conn, "CREATE TABLE IF NOT EXISTS ctt_project_station 
   (
     db_id	smallint PRIMARY KEY,
     project_id smallint NOT NULL,
@@ -93,7 +83,7 @@ dbExecute(conn, "CREATE TABLE IF NOT EXISTS ctt_project_station
         ON UPDATE NO ACTION
   )")
 
-dbExecute(conn, "CREATE TABLE IF NOT EXISTS raw 
+DBI::dbExecute(conn, "CREATE TABLE IF NOT EXISTS raw 
   (
     id	SERIAL PRIMARY KEY,
     path  TEXT NOT NULL,
@@ -106,7 +96,7 @@ dbExecute(conn, "CREATE TABLE IF NOT EXISTS raw
     station_id TEXT
   )")
 
-dbExecute(conn, "CREATE TABLE IF NOT EXISTS node_health
+DBI::dbExecute(conn, "CREATE TABLE IF NOT EXISTS node_health
   (
     PRIMARY KEY (radio_id, node_id, time, station_id),
     time TIMESTAMP with time zone NOT NULL,
@@ -130,7 +120,7 @@ dbExecute(conn, "CREATE TABLE IF NOT EXISTS node_health
         ON UPDATE NO ACTION
   )")
 
-dbExecute(conn, "CREATE TABLE IF NOT EXISTS gps
+DBI::dbExecute(conn, "CREATE TABLE IF NOT EXISTS gps
   (
     path  TEXT NOT NULL,
     latitude NUMERIC(8,6),
@@ -148,11 +138,11 @@ dbExecute(conn, "CREATE TABLE IF NOT EXISTS gps
 
   sapply(projects, function(a) {
     b <- unname(as.data.frame(a))
-    vars <- paste(dbListFields(conn, "ctt_project"), sep="", collapse=",")
-    insertnew <- dbSendQuery(conn, paste("INSERT INTO ","ctt_project"," (",vars,") VALUES ($1, $2) ON CONFLICT DO NOTHING",sep="")) 
+    vars <- paste(DBI::dbListFields(conn, "ctt_project"), sep="", collapse=",")
+    insertnew <- DBI::dbSendQuery(conn, paste("INSERT INTO ","ctt_project"," (",vars,") VALUES ($1, $2) ON CONFLICT DO NOTHING",sep="")) 
   #it is possible you should be using dbSendStatement for all of these
-    dbBind(insertnew, params=b)
-    dbClearResult(insertnew)
+    DBI::dbBind(insertnew, params=b)
+    DBI::dbClearResult(insertnew)
   
     basename <- a$name
     id <- a[['id']]
@@ -169,23 +159,23 @@ dbExecute(conn, "CREATE TABLE IF NOT EXISTS gps
       if (is.null(c$`end-at`)) {
         c$end_at <- NA} else {colnames(c)[colnames(c)=="end-at"] <- "end_at"}
       return(c)})
-    mystations <- as.data.frame(rbindlist(mystations, fill=TRUE))
+    mystations <- as.data.frame(dplyr::bind_rows(mystations))
     MYSTATIONS <- list(unique(mystations$station_id))
     mystations <- unname(mystations)
     print("FORMATTED")
     print(mystations)
   
-  #insertnew <- dbSendQuery(conn, paste("INSERT INTO ","station (station_id)"," VALUES ($1)
+  #insertnew <- DBI::dbSendQuery(conn, paste("INSERT INTO ","station (station_id)"," VALUES ($1)
   #                                     ON CONFLICT DO NOTHING",sep=""))
   #dbBind(insertnew, params=MYSTATIONS)
   #dbClearResult(insertnew)
   
-    vars <- paste(dbListFields(conn, "ctt_project_station"), sep="", collapse=",")
+    vars <- paste(DBI::dbListFields(conn, "ctt_project_station"), sep="", collapse=",")
     #print(vars)
-    insertnew <- dbSendQuery(conn, paste("INSERT INTO ","ctt_project_station"," (",vars,") VALUES ($1, $4, $2, $3, $5)
+    insertnew <- DBI::dbSendQuery(conn, paste("INSERT INTO ","ctt_project_station"," (",vars,") VALUES ($1, $4, $2, $3, $5)
                                        ON CONFLICT DO NOTHING",sep=""))
-    dbBind(insertnew, params=mystations)
-    dbClearResult(insertnew)
+    DBI::dbBind(insertnew, params=mystations)
+    DBI::dbClearResult(insertnew)
   })
 }
 
@@ -196,8 +186,10 @@ querygen <- function(mycont) {
   pieces <- paste(pieces, collapse=" and ")
   return(pieces)
 }
+
 timeset <- function(g) {unname(sapply(g, function(h) ifelse(is.na(h), NA, paste(as.character(h), "UTC"))))}
-db_insert <- function(contents, filetype, conn, sensor, y, begin) {
+
+db_insert <- function(contents, filetype, conn, sensor, y, begin, readin=NULL) {
   print(filetype)
   print(str(contents))
   print(begin)
@@ -206,19 +198,19 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
       DatePattern = '[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}[T, ][[:digit:]]{2}:[[:digit:]]{2}:[[:digit:]]{2}(.[[:digit:]]{3})?[Z]?'
       exactDatePattern = '^[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}[T, ][[:digit:]]{2}:[[:digit:]]{2}:[[:digit:]]{2}(.[[:digit:]]{3})?[Z]?$'
       brokenrow <- grep(exactDatePattern, contents$Time, invert=TRUE) #find row that has a date embedded in a messed up string (i.e. interrupted rows)
-      contents[brokenrow,1]<- str_extract(contents[brokenrow,1], DatePattern)
+      contents[brokenrow,1]<- substring(contents[brokenrow,1], regexpr(DatePattern, contents[brokenrow,1]))
       contents$Time <- as.POSIXct(contents$Time)
-      contents <- filter(contents, Time < Sys.time() & Time > begin)
+      contents <- dplyr::filter(contents, Time < Sys.time() & Time > begin)
     } else {
-    contents <- filter(contents, Time < Sys.time() & Time > begin)
+    contents <- dplyr::filter(contents, Time < Sys.time() & Time > begin)
     }
     print(contents)
     #contents <- contents[contents$Time < Sys.time() & contents$Time > begin,]
   }
   contents[,unname(which(sapply(contents, is.POSIXct)))] <- ifelse(nrow(contents[,unname(which(sapply(contents, is.POSIXct)))]) > 1,
-                                                                   as_tibble(apply(contents[,unname(which(sapply(contents, is.POSIXct)))], 2,
+                                                                   tibble::as_tibble(apply(contents[,unname(which(sapply(contents, is.POSIXct)))], 2,
                                                                                    timeset)),
-    bind_rows(apply(contents[,unname(which(sapply(contents, is.POSIXct)))], 2, timeset)))
+    dplyr::bind_rows(apply(contents[,unname(which(sapply(contents, is.POSIXct)))], 2, timeset)))
   
   contents <- data.frame(contents)
 
@@ -243,7 +235,7 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
     names(contents) <- sapply(names(contents), function(x) gsub('([[:lower:]])([[:upper:]])', '\\1_\\2', x))
     #if(fix=TRUE) {
     #  query <- querygen(contents[1,])
-    #  res <- dbGetQuery(conn, paste0("select * from gps where ", query))
+    #  res <- DBI::dbGetQuery(conn, paste0("select * from gps where ", query))
     #  if(nrow(res) > 0) {
     #    me <- data.frame(matrix(ncol=ncol(contents), nrow=0))
     #    names(me) <- names(contents)
@@ -257,10 +249,10 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
       contents$TagRSSI <- as.integer(contents$TagRSSI)
       if (length(which(!is.na(contents$NodeId))) > 0) {
         nodeids <- contents$NodeId[which(!is.na(contents$NodeId))]
-        insertnew <- dbSendQuery(conn, paste("INSERT INTO ","nodes (node_id)"," VALUES ($1)
+        insertnew <- DBI::dbSendQuery(conn, paste("INSERT INTO ","nodes (node_id)"," VALUES ($1)
                                            ON CONFLICT DO NOTHING",sep=""))
-        dbBind(insertnew, params=list(unique(nodeids)))
-        dbClearResult(insertnew)
+        DBI::dbBind(insertnew, params=list(unique(nodeids)))
+        DBI::dbClearResult(insertnew)
       }
       if(length(which(nchar(contents$TagId) != 8)) > 0) {
         contents <- contents[-which(nchar(contents$TagId) != 8),] #drop rows where TagId not 8 characters
@@ -268,7 +260,7 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
       names(contents) <- sapply(names(contents), function(x) gsub('([[:lower:]])([[:upper:]])', '\\1_\\2', x))
       #if(fix=TRUE) {
       #  query <- querygen(contents[1,])
-      #  res <- dbGetQuery(conn, paste0("select * from raw where ", query))
+      #  res <- DBI::dbGetQuery(conn, paste0("select * from raw where ", query))
       #  if(nrow(res) > 0) {
       #    me <- data.frame(matrix(ncol=ncol(contents), nrow=0))
       #    names(me) <- names(contents)
@@ -288,14 +280,14 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
         contents$Longitude <- NA
       }
       nodeids <- unique(contents$NodeId)
-      insertnew <- dbSendQuery(conn, paste("INSERT INTO ","nodes (node_id)"," VALUES ($1)
+      insertnew <- DBI::dbSendQuery(conn, paste("INSERT INTO ","nodes (node_id)"," VALUES ($1)
                                            ON CONFLICT DO NOTHING",sep=""))
-      dbBind(insertnew, params=list(unique(nodeids)))
-      dbClearResult(insertnew)
+      DBI::dbBind(insertnew, params=list(unique(nodeids)))
+      DBI::dbClearResult(insertnew)
       names(contents) <- sapply(names(contents), function(x) gsub('([[:lower:]])([[:upper:]])', '\\1_\\2', x))
       #if(fix=TRUE) {
       #  query <- querygen(contents[1,])
-      #  res <- dbGetQuery(conn, paste0("select * from node_health where ", query))
+      #  res <- DBI::dbGetQuery(conn, paste0("select * from node_health where ", query))
       #  if(nrow(res) > 0) {
       #    me <- data.frame(matrix(ncol=ncol(contents), nrow=0))
       #    names(me) <- names(contents)
@@ -307,38 +299,39 @@ db_insert <- function(contents, filetype, conn, sensor, y, begin) {
       #print(str(contents))
       #print(dbListFields(conn, filetype))
       if (filetype == "raw") {
-        vars <- paste(dbListFields(conn, filetype)[2:length(dbListFields(conn, filetype))], sep="", collapse=",") 
-        vals <- paste(seq_along(1:(length(dbListFields(conn, filetype))-1)), sep="", collapse = ", $")
+        vars <- paste(DBI::dbListFields(conn, filetype)[2:length(DBI::dbListFields(conn, filetype))], sep="", collapse=",") 
+        vals <- paste(seq_along(1:(length(DBI::dbListFields(conn, filetype))-1)), sep="", collapse = ", $")
         names(contents) <- tolower(names(contents))
-        contents <- contents[,dbListFields(conn, filetype)[2:length(dbListFields(conn, filetype))]]
+        contents <- contents[,DBI::dbListFields(conn, filetype)[2:length(DBI::dbListFields(conn, filetype))]]
       } else {
-      vars <- paste(dbListFields(conn, filetype), sep="", collapse=",") 
-      vals <- paste(seq_along(1:length(dbListFields(conn, filetype))), sep="", collapse = ", $")
+      vars <- paste(DBI::dbListFields(conn, filetype), sep="", collapse=",") 
+      vals <- paste(seq_along(1:length(DBI::dbListFields(conn, filetype))), sep="", collapse = ", $")
       names(contents) <- tolower(names(contents))
-      contents <- contents[,dbListFields(conn, filetype)]
+      contents <- contents[,DBI::dbListFields(conn, filetype)]
       }
       h <- tryCatch({tryCatch({
           if(any(row.names(contents) == "NA")) {contents <- contents[-which(row.names(contents)=="NA"),]}
         #if(fixthis = TRUE) {
           #fill out here
         #} else {
-          dbWriteTable(conn, filetype, contents, append=TRUE)
-          insertnew <- dbSendQuery(conn, paste("INSERT INTO ","data_file (path)"," VALUES ($1)
+          DBI::dbWriteTable(conn, filetype, contents, append=TRUE)
+          insertnew <- DBI::dbSendQuery(conn, paste("INSERT INTO ","data_file (path)"," VALUES ($1)
                                          ON CONFLICT DO NOTHING",sep=""))
-          dbBind(insertnew, params=list(y))
-          dbClearResult(insertnew)
-          NULL
+          DBI::dbBind(insertnew, params=list(y))
+          DBI::dbClearResult(insertnew)
+          return(NULL)
         #}
         }, error = function(err) {
           # error handler picks up where error was generated, in Bob's script it breaks if header is missing
           myquery <- paste("INSERT INTO ", filetype, " (", vars,") VALUES ($",vals,")
                                          ON CONFLICT DO NOTHING",sep="")
-          insertnew <- dbSendQuery(conn, myquery)
-          dbBind(insertnew, params=unname(contents))
-          dbClearResult(insertnew)
+          insertnew <- DBI::dbSendQuery(conn, myquery)
+          DBI::dbBind(insertnew, params=unname(contents))
+          DBI::dbClearResult(insertnew)
         })
       }, error = function(err) {
         print("could not insert")
+        #if(!is.null(readin)) {file.copy(readin, "~/Documents/data/weird_files/fail_insert")}
         return(list(err, contents, y))
         }
         )
@@ -423,9 +416,9 @@ get_data <- function(thisproject, outpath, f=NULL, my_station, beginning, ending
     if (filetype != "log" & filetype != "telemetry" & filetype != "sensorgnome") {
       contents = downloadFiles(file_id = x)
       if (filetype == "raw") {
-        contents <- content(contents, type="text", col_types = list(NodeId = 'c'))
+        contents <- httr::content(contents, type="text", col_types = list(NodeId = 'c'))
       } else {
-        contents <- content(contents, type="text")
+        contents <- httr::content(contents, type="text")
       }
       if (!is.null(contents)) {
       dir.create(file.path(outpath, basename, sensor), showWarnings = FALSE)
@@ -433,15 +426,21 @@ get_data <- function(thisproject, outpath, f=NULL, my_station, beginning, ending
       print(paste("downloading",y,"to",file.path(outpath, basename, sensor, filetype)))
       print(x)
       write(contents, file=gzfile(file.path(outpath, basename, sensor, filetype, y)))
+      e <- file.path(outpath, basename, sensor, filetype, y)
       contents <- tryCatch({
-          read_csv(file.path(outpath, basename, sensor, filetype, y), col_names = TRUE)
+          readr::read_csv(e, col_names = TRUE)
         }, error = function(err) {
           return(NULL)
         })
       if(!is.null(contents)) {
-        delete.columns <- grep("(^X)", colnames(contents), perl=T)
+        delete.columns <- grep("[[:digit:]]", colnames(contents), perl=T)
         if (length(delete.columns) > 0) {
-          contents <- rbind(contents,Correct_Colnames(contents))
+          newcontents <- tryCatch({
+            rbind(contents,Correct_Colnames(contents))
+          }, error = function(err) {
+            return(contents)
+          })
+          contents <- newcontents
         }
         if(filetype == "raw") {
           if (length(delete.columns) > 0) {
@@ -454,8 +453,10 @@ get_data <- function(thisproject, outpath, f=NULL, my_station, beginning, ending
           indx <- count.fields(file.path(outpath, basename, sensor, filetype, y), sep=",")
           if(any(indx != correct)) {
             rowfix <- which(indx != correct) - 1
-            getrow <- read.csv(file.path(outpath, basename, sensor, filetype, y),as.is=TRUE, na.strings=c("NA", ""), skipNul = TRUE, skip=rowfix-1, nrow=1)
-            getrow[,1]<- str_extract(getrow[,1], DatePattern) #handling assumes e.g. extra field and correct record starts in column 2
+            rowlen <- indx[which(indx != correct)] #what if this is more than 1 row?
+            getrow <- read.csv(e,as.is=TRUE, na.strings=c("NA", ""), header = FALSE, col.names = paste0("V",seq_len(rowlen)), skipNul = TRUE, skip=rowfix, nrow=1, fill=TRUE)
+            getrow <- getrow[,(length(getrow) - correct + 1):length(getrow)]
+            getrow[,1] <- substring(getrow[,1], regexpr(DatePattern, getrow[,1])) #handling assumes e.g. extra field and correct record starts in column 2
             if(any(grepl("T", getrow[,1]))) {
               vals <- as.POSIXct(getrow[,1],format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)
             } else {
@@ -495,8 +496,22 @@ get_data <- function(thisproject, outpath, f=NULL, my_station, beginning, ending
 failed <- Map(get_files, ids, file_names)
 return(failed)}
 
+#get_my_data(my_token, outpath, myproject="CTT Office", conn) #conn
+
+#' Download data
+#'
+#' This function allows you to download your sensor station data, with the option of simultaneously importing to a local database
+#' @param my_token your API key
+#' @param outpath where your files are to be downloaded
+#' @param db_name (optional) the connection to your local database
+#' @param myproject the name of your project on our system
+#' @param mystation (optional) the station ID you'd like to download data from
+#' @param begin (optional) limit your data download to a start time
+#' @param end (optional) limit your data download to an end time
+#' @export
+
 get_my_data <- function(my_token, outpath, db_name=NULL, myproject=NULL, mystation=NULL, begin=NULL, end=NULL) {
-  projects <- content(POST(host, path = project, body = list(token=my_token), encode="json", verbose()), "parsed")
+  projects <- httr::content(httr::POST(host, path = project, body = list(token=my_token), encode="json"))
   print(projects)
   projects <- projects[['projects']]
   #print(projects)
@@ -521,26 +536,26 @@ get_my_data <- function(my_token, outpath, db_name=NULL, myproject=NULL, mystati
 }
 
 pop <- function(x) { #this was a function written before the data file table was added, no one should need this
-  allnode <- dbReadTable(x, "node_health")
-  allgps <- dbReadTable(x, "gps")
-  allbeep <- dbReadTable(x, "raw")
-  insertnew <- dbSendQuery(conn, paste("INSERT OR IGNORE INTO ","data_file (path)"," VALUES ($)",sep=""))
-  dbBind(insertnew, params=list(unique(c(allnode$path, allgps$path, allbeep$path))))
-  dbClearResult(insertnew)
+  allnode <- DBI::dbReadTable(x, "node_health")
+  allgps <- DBI::dbReadTable(x, "gps")
+  allbeep <- DBI::dbReadTable(x, "raw")
+  insertnew <- DBI::dbSendQuery(conn, paste("INSERT OR IGNORE INTO ","data_file (path)"," VALUES ($)",sep=""))
+  DBI::dbBind(insertnew, params=list(unique(c(allnode$path, allgps$path, allbeep$path))))
+  DBI::dbClearResult(insertnew)
   
-  insertnew <- dbSendQuery(conn, paste("INSERT OR IGNORE INTO ","nodes (node_id)"," VALUES ($)",sep=""))
-  dbBind(insertnew, params=list(unique(allnode$node_id)))
-  dbClearResult(insertnew)
+  insertnew <- DBI::dbSendQuery(conn, paste("INSERT OR IGNORE INTO ","nodes (node_id)"," VALUES ($)",sep=""))
+  DBI::dbBind(insertnew, params=list(unique(allnode$node_id)))
+  DBI::dbClearResult(insertnew)
 }
 
 update_db <- function(d, outpath, myproject, fix=FALSE) {
   myfiles <- list.files(file.path(outpath, myproject), recursive = TRUE)
   files_loc <- sapply(strsplit(myfiles, "/"), tail, n=1)
-  allnode <- dbReadTable(d, "data_file")
+  allnode <- DBI::dbReadTable(d, "data_file")
   if(fix) {
-    res <- dbGetQuery(d, "select distinct path from gps")
-    res2 <- dbGetQuery(d, "select distinct path from raw")
-    res1 <- dbGetQuery(d, "select distinct path from node_health")
+    res <- DBI::dbGetQuery(d, "select distinct path from gps")
+    res2 <- DBI::dbGetQuery(d, "select distinct path from raw")
+    res1 <- DBI::dbGetQuery(d, "select distinct path from node_health")
     filesdone <- c(res$path, res1$path, res2$path)
   } else {
     filesdone <- allnode$path
@@ -567,7 +582,7 @@ get_files_import <- function(e, conn, outpath, myproject) {
   fileinfo <- splitfile[2]
   sensorid <- unlist(strsplit(fileinfo,"-"))
   sensor <- sensorid[1]
-  i <- dbReadTable(conn, "ctt_project_station")
+  i <- DBI::dbReadTable(conn, "ctt_project_station")
   begin <- i[i$station_id==sensor,]$deploy_at
   filenameinfo <- sensorid[2]
   file_info <- unlist(strsplit(filenameinfo, "\\."))[1]
@@ -583,13 +598,14 @@ get_files_import <- function(e, conn, outpath, myproject) {
     print("attempting import")
   contents <- tryCatch({
     if (file.size(e) > 0) {
-      read_csv(e, col_names = TRUE)
+      readr::read_csv(e, col_names = TRUE)
     }}, error = function(err) {
       return(NULL)
     })
     if(!is.null(contents)) {
-      delete.columns <- grep("(^X)", colnames(contents), perl=T)
+      delete.columns <- grep("[[:digit:]]", colnames(contents))
       if (length(delete.columns) > 0) {
+        #what if the 1st row of the headerless file has the problem?
         contents <- rbind(contents,Correct_Colnames(contents))
       }
       if(filetype == "raw") {
@@ -603,8 +619,10 @@ get_files_import <- function(e, conn, outpath, myproject) {
       indx <- count.fields(e, sep=",")
       if(any(indx != correct)) {
         rowfix <- which(indx != correct) - 1
-        getrow <- read.csv(e,as.is=TRUE, na.strings=c("NA", ""), skipNul = TRUE, skip=rowfix-1, nrow=1)
-        getrow[,1]<- str_extract(getrow[,1], DatePattern) #handling assumes e.g. extra field and correct record starts in column 2
+        rowlen <- indx[which(indx != correct)] #what if this is more than 1 row?
+        getrow <- read.csv(e,as.is=TRUE, na.strings=c("NA", ""), header = FALSE, col.names = paste0("V",seq_len(rowlen)), skipNul = TRUE, skip=rowfix, nrow=1, fill=TRUE)
+        getrow <- getrow[,(length(getrow) - correct + 1):length(getrow)]
+        getrow[,1]<- substring(getrow[,1], regexpr(DatePattern, getrow[,1])) #handling assumes e.g. extra field and correct record starts in column 2
         if(any(grepl("T", getrow[,1]))) {
           vals <- as.POSIXct(getrow[,1],format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)
         } else {
@@ -614,7 +632,7 @@ get_files_import <- function(e, conn, outpath, myproject) {
         }
         getrow[,1] <- vals
         getrow[,3] <- as.character(getrow[,3])
-        contents[rowfix,] <- getrow[1,]
+        contents[rowfix,] <- getrow[1,] #this has a consequence if there's more than 1 affected row...
       }
       } else if(filetype=="gps") {
         if(length(delete.columns) > 0) {
@@ -636,7 +654,7 @@ get_files_import <- function(e, conn, outpath, myproject) {
       #if(fix=TRUE) {
       #z <- db_insert(contents, filetype, conn, sensor, y, begin, fix=TRUE)
       #} else {
-        z <- db_insert(contents, filetype, conn, sensor, y, begin)
+        z <- db_insert(contents, filetype, conn, sensor, y, begin, readin=e)
       #}
       }
   }
