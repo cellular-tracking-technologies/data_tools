@@ -4,13 +4,29 @@ Correct_Colnames <- function(df) {
   DatePattern = '^[[:digit:]]{4}\\.[[:digit:]]{2}\\.[[:digit:]]{2}[T,\\.][[:digit:]]{2}\\.[[:digit:]]{2}\\.[[:digit:]]{2}(.[[:digit:]]{3})?[Z]?'
   rowval[which(grepl(DatePattern,rowval))] <- as.character(as.POSIXct(rowval[grepl(DatePattern,rowval)], format="%Y.%m.%d.%H.%M.%S", tz="UTC"))
   return(rowval)}
-
+DatePattern = '[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}[T, ][[:digit:]]{2}:[[:digit:]]{2}:[[:digit:]]{2}(.[[:digit:]]{3})?[Z]?'
 is.POSIXct <- function(x) inherits(x, "POSIXct")  
 resave <- function(..., list = character(), file) {
   previous  <- load(file)
   var.names <- c(list, as.character(substitute(list(...)))[-1L])
   for (var in var.names) assign(var, get(var, envir = parent.frame()))
   save(list = unique(c(previous, var.names)), file = file)
+}
+
+fixrow <- function(rowlen,rowfix,e,correct,DatePattern) {
+getrow <- read.csv(e,as.is=TRUE, na.strings=c("NA", ""), header = FALSE, col.names = paste0("V",seq_len(rowlen)), skipNul = TRUE, skip=rowfix, nrow=1, fill=TRUE)
+getrow <- getrow[,(length(getrow) - correct + 1):length(getrow)]
+getrow[,1] <- substring(getrow[,1], regexpr(DatePattern, getrow[,1])) #handling assumes e.g. extra field and correct record starts in column 2
+if(any(grepl("T", getrow[,1]))) {
+  vals <- as.POSIXct(getrow[,1],format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)
+} else {
+  vals <- unname(sapply(getrow[,1], function(x) as.POSIXct(x, format="%Y-%m-%d %H:%M:%OS", tz = "UTC", optional=TRUE)))
+  vals1 <- sapply(vals, function(x) format(as.POSIXct(x, origin="1970-01-01", tz="UTC"),"%Y-%m-%d %H:%M:%OS"))
+  vals <- as.POSIXct(vals1, tz="UTC")
+}
+getrow[,1] <- vals
+getrow[,3] <- as.character(getrow[,3])
+return(getrow[1,])
 }
 
 host <- 'https://api.internetofwildlife.com/' #'https://account.celltracktech.com'
@@ -454,19 +470,13 @@ get_data <- function(thisproject, outpath, f=NULL, my_station, beginning, ending
           if(any(indx != correct)) {
             rowfix <- which(indx != correct) - 1
             rowlen <- indx[which(indx != correct)] #what if this is more than 1 row?
-            getrow <- read.csv(e,as.is=TRUE, na.strings=c("NA", ""), header = FALSE, col.names = paste0("V",seq_len(rowlen)), skipNul = TRUE, skip=rowfix, nrow=1, fill=TRUE)
-            getrow <- getrow[,(length(getrow) - correct + 1):length(getrow)]
-            getrow[,1] <- substring(getrow[,1], regexpr(DatePattern, getrow[,1])) #handling assumes e.g. extra field and correct record starts in column 2
-            if(any(grepl("T", getrow[,1]))) {
-              vals <- as.POSIXct(getrow[,1],format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)
+            if(length(rowfix) < 2) {
+              contents[rowfix,] <- fixrow(rowlen,rowfix,e,correct,DatePattern)
             } else {
-              vals <- unname(sapply(getrow[,1], function(x) as.POSIXct(x, format="%Y-%m-%d %H:%M:%OS", tz = "UTC", optional=TRUE)))
-              vals1 <- sapply(vals, function(x) format(as.POSIXct(x, origin="1970-01-01", tz="UTC"),"%Y-%m-%d %H:%M:%OS"))
-              vals <- as.POSIXct(vals1, tz="UTC")
+             fixed <- Map(fixrow, rowlen, rowfix, MoreArgs=list(e=e, DatePattern=DatePattern, correct=correct))
+             fixed <- data.table::rbindlist(fixed, use.names=FALSE)
+             contents[rowfix,] <- fixed
             }
-            getrow[,1] <- vals
-            getrow[,3] <- as.character(getrow[,3])
-            contents[rowfix,] <- getrow[1,]
           }
         } else if(filetype=="gps") {
           if(length(delete.columns) > 0) {
@@ -620,19 +630,13 @@ get_files_import <- function(e, conn, outpath, myproject) {
       if(any(indx != correct)) {
         rowfix <- which(indx != correct) - 1
         rowlen <- indx[which(indx != correct)] #what if this is more than 1 row?
-        getrow <- read.csv(e,as.is=TRUE, na.strings=c("NA", ""), header = FALSE, col.names = paste0("V",seq_len(rowlen)), skipNul = TRUE, skip=rowfix, nrow=1, fill=TRUE)
-        getrow <- getrow[,(length(getrow) - correct + 1):length(getrow)]
-        getrow[,1]<- substring(getrow[,1], regexpr(DatePattern, getrow[,1])) #handling assumes e.g. extra field and correct record starts in column 2
-        if(any(grepl("T", getrow[,1]))) {
-          vals <- as.POSIXct(getrow[,1],format="%Y-%m-%dT%H:%M:%OS",tz = "UTC", optional=TRUE)
+        if(length(rowfix) < 2) {
+          contents[rowfix,] <- fixrow(rowlen,rowfix,e,correct,DatePattern)
         } else {
-          vals <- unname(sapply(getrow[,1], function(x) as.POSIXct(x, format="%Y-%m-%d %H:%M:%OS", tz = "UTC", optional=TRUE)))
-          vals1 <- sapply(vals, function(x) format(as.POSIXct(x, origin="1970-01-01", tz="UTC"),"%Y-%m-%d %H:%M:%OS"))
-          vals <- as.POSIXct(vals1, tz="UTC")
+          fixed <- Map(fixrow, rowlen, rowfix, MoreArgs=list(e=e, DatePattern=DatePattern, correct=correct))
+          fixed <- data.table::rbindlist(fixed, use.names=FALSE)
+          contents[rowfix,] <- fixed
         }
-        getrow[,1] <- vals
-        getrow[,3] <- as.character(getrow[,3])
-        contents[rowfix,] <- getrow[1,] #this has a consequence if there's more than 1 affected row...
       }
       } else if(filetype=="gps") {
         if(length(delete.columns) > 0) {
