@@ -1,4 +1,5 @@
 source("functions/api_postgres.R")
+library(DBI)
 start <- Sys.time()
 
 ####SETTINGS####
