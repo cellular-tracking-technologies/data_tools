@@ -1,0 +1,105 @@
+---
+title: "Node Battery / Solar Check"
+author: "Harrison Hepding"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#Load Packages (Install if you do not have them)
+library(RPostgres)
+library(dplyr) 
+library(ggplot2)
+library(tidyverse)
+
+#Connect to Postgres Database
+db_name <- "YOUR POSTGRES DATABASE NAME" #this will be what you named your Postgres database (probably through PGAdmin)
+
+conn <- dbConnect(RPostgres::Postgres(), dbname=db_name) #connect to Postgres database
+
+### Node Health
+node_health_db <- tbl(conn, "node_health")
+node_health <- node_health_db %>% #create a data frame with your node health data
+  filter(time > 'yyyy-mm-dd') %>%  #put the start date for you node health data here (yyyy-mm-dd)
+#  filter(time < 'yyyy-mm-dd') %>% #put the end date for you node health data here (yyyy-mm-dd) if needed
+  collect()
+
+#Changing node IDs to capital letters 
+node_health$node_id <- toupper(node_health$node_id)
+
+#Setting Node of Interest (USE CAPS)
+
+node.interest <- "XXXXXX" #put your node ID here (capitalized)
+
+node_interest <- node_health %>%
+  filter(node_id == node.interest)
+
+```
+
+## Battery Voltage
+
+```{r Interest Battery, echo=FALSE, results='hide'}
+ggplot(data = node_interest, aes(x = time, y = battery)) +
+  geom_point() +  # this graph can be either in the form of a line graph or individual points, simply change between geom_line() and geom_point()
+  xlab("Time") + ylab("Battery (V)") +
+  ggtitle("Battery over Time") +
+  theme(axis.text.x = element_text(angle = 90)) +
+  facet_wrap(~ node_id)
+```
+
+## Solar Current
+
+```{r Interest Solar Current, echo=FALSE}
+ggplot(data = node_interest, aes(x = time, y = solar_current)) +
+  geom_line() +
+  xlab("Time") + ylab("Solar Current") +
+  facet_wrap(~ node_id)
+```
+
+## Cummulative Solar Current
+
+```{r Interest Cumulative Solar Current, echo=FALSE}
+ggplot(data = node_interest, aes(x = time, y = cumulative_solar_current)) +
+  geom_line() +
+  xlab("Time") + ylab("Cumulative Solar Current") +
+  facet_wrap(~ node_id)
+```
+
+## Solar Volts
+
+```{r Interest Solar Volts, echo=FALSE}
+ggplot(data = node_interest, aes(x = time, y = solar_volts)) +
+  geom_line() +
+  xlab("Time") + ylab("Solar Volts") +
+  facet_wrap(~ node_id)
+```
+
+## Temperature
+
+```{r Interest Temperature, echo=FALSE}
+ggplot(data = node_interest, aes(x = time, y = celsius)) +
+  geom_line() +
+  xlab("Time") + ylab("Temperature (C)") +
+  facet_wrap(~ node_id)
+```
+
+## RSSI
+
+```{r Interest RSSI, echo=FALSE}
+ggplot(data = node_interest, aes(x = time, y = node_rssi)) +
+  geom_line() +
+  xlab("Time") + ylab("RSSI") +
+  facet_wrap(~ radio_id)
+```
+
+## GPS Points
+
+```{r GPS Precision, echo=FALSE}
+ggplot(data = node_interest, aes(x = longitude, y = latitude)) +
+  geom_point(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Longitude") + ylab("Latitude") +
+  coord_fixed(ratio = 1)
+```
