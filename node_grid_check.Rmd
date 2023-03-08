@@ -1,0 +1,121 @@
+---
+title: "Node Grid Health Check"
+author: "Harrison Hepding"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+#Load Packages (Install if you do not have them)
+library(RPostgres)
+library(dplyr) 
+library(ggplot2)
+library(tidyverse)
+
+#Connect to Postgres Database
+db_name <- "meadows" #this will be what you named your Postgres database (probably through PGAdmin)
+
+conn <- dbConnect(RPostgres::Postgres(), dbname=db_name) 
+
+### Node Health
+node_health_db <- tbl(conn, "node_health")
+node_health <- node_health_db %>%
+  filter(time > 'yyyy-mm-dd') %>%  #put the start date for you node health data here (yyyy-mm-dd)
+  filter(time < 'yyyy-mm-dd') %>% #end date here (yyyy-mm-dd), if desired
+  collect()
+
+#Changing node IDs to capital letters
+node_health$node_id <- toupper(node_health$node_id)
+
+na_nodes <- node_health[is.na(node_health$latitude),]
+
+na_nodes$date <- as.Date(format(na_nodes$time,"%Y-%m-%d"))
+```
+
+## Node Battery Boxplot
+
+This is a box plot of battery voltage values for each node, nodes should ideally have a battery of above 3.5 volts indicated by the red line.
+
+If nodes Battery Voltage looks low / odd please use the node_battery_status_check.Rmd file to further explore individual node battery health data.
+
+
+```{r boxplot, echo=FALSE}
+ggplot(data = node_health, aes(x = node_id, y = battery)) +
+  geom_boxplot() +
+  geom_hline(yintercept=3.5, linetype="solid", color="red", linewidth=1) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Node ID") + ylab("Battery (V)")
+```
+
+## Node Solar Current Boxplot
+
+This is a box plot of Solar Current for each node, Solar Current should show a solid distribution above 0.
+
+If nodes Solar Current looks low / odd use the node_battery_status_check.Rmd file to further explore individual node battery health data.
+
+```{r boxplot2, echo=FALSE}
+ggplot(data = node_health, aes(x = node_id, y = solar_current)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Node ID") + ylab("Solar Current")
+```
+
+## Nodes Sending "NA" GPS data
+
+This is a bar graph of nodes that are not sending GPS data with their node health data, resulting in "NA" GPS data. If this graph is empty, all nodes are sending GPS data. 
+
+```{r NA Latitude/Longitude Data, echo=FALSE}
+ggplot(data = na_nodes, aes(x = node_id, y = nrow(na_nodes))) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Node Id") + ylab("Number of Checks with Missing GPS data")
+```
+
+## Extraneous GPS Points
+
+This will plot all GPS points sent by your nodes on a lat/long plane.
+
+You should see a grouping of GPS points that is associated with your projects node grid, however there may be points outside of your grid, either from the node taking a GPS fix before it was deployed or a faulty GPS fix.
+
+```{r Extraneous GPS, echo=FALSE}
+ggplot(data = node_health, aes(x = longitude, y = latitude)) +
+  geom_point(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Longitude") + ylab("Latitude") +
+  coord_fixed(ratio = 1)
+```
+
+
+## Ensure all Nodes in Grid are sending GPS
+
+This shows your nodes GPS points only from within the latitude/longitude bounds of your node grid that you set, ensure that all spots on the grid that have a node are receiving GPS fixes.
+
+```{r Check Points within Grid Bounds, echo=FALSE}
+nodes_grid <- node_health[!(node_health$latitude > "39.000000" | node_health$latitude < "38.000000"),]
+nodes_grid <- nodes_grid[!(nodes_grid$longitude > "-74.950" | nodes_grid$longitude < "-74.940"),]
+# nodes_grid <- node_health[!(node_health$longitude > " your max longitude" | node_health$longitude < "your min longitude"),] # can be repeated for longitude if desired
+
+ggplot(data = nodes_grid, aes(x = longitude, y = latitude)) +
+  geom_point(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Longitude") + ylab("Latitude") +
+  coord_fixed(ratio = 1)
+```
+
+## Node RSSI
+
+These plots show RSSI by Node ID and RSSI by Radio ID (the antennas on your base station). This will give you insight into the relative signal strength each node has to the base station, as well as what base station antennas are recieving the strongest signal strength. 
+
+```{r Node RSSI, echo=FALSE}
+ggplot(data = node_health, aes(x = node_id, y = node_rssi)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Node ID") + ylab("RSSI")
+
+ggplot(data = node_health, aes(x = factor(radio_id), y = node_rssi)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("Radio ID") + ylab("RSSI")
+```
