@@ -111,7 +111,7 @@ node_prep <- function(df, latlng) {
       zone <- unique(zone)
     
     ## Change CRS of the spatial data frame and convert to data frame
-      res <- spTransform(data_frame, CRS(paste0("+proj=utm +zone=", zone, "+datum=WGS84")))
+      res <- spTransform(data_frame, CRS(paste0("+proj=utm +zone=", zone, " +datum=WGS84")))
       return(as.data.frame(res))
     }
   
